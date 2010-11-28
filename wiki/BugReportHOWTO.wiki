@@ -1,0 +1,30 @@
+#summary How to raise a bug report for MPlayer-AmigaOS.
+#labels Featured,Phase-Support
+
+= Introduction =
+
+This is a quick HOW-TO on how to open a bug report for this project. Please follow it carefully, otherwise your report might get rejected because of insufficient or wrong informations about the issue.
+
+
+= Before opening an issue =
+
+- Please note that  a Google or GMail account is required.
+
+- Make sure that there's no issue that already covers the problem you have found, make first a search among all the opened issues.
+
+- It is warmly recommended that you try to reproduce the problem on the latest version of MPlayer (which, at the moment, is the "Summer" version: http://os4depot.net/index.php?function=showfile&file=video/play/mplayer.lha ). If for any reason you prefer to use an older version and the problem can be reproduced only with it, please add a description on the reason the older version is preferred, if a feature is missing in the latest MPlayer, or it behaves worse in some condition, we'll try to fix this in the next version.
+
+
+
+= How to open an issue =
+
+- _Template_: choose either "Bug report" or "Feature Request".
+
+- _Summary_: Try to be as both descriptive and short as possible, e.g. "System freeze when resizing the window to the smallest size possible"
+
+- _Description_: please include the MPlayer version (e.g. _latest "Summer" version_, or  _MPlayer SVN-r29532-4.2.3_), this information is *required*, if it's missing the issue will be discarded. Report what version of OS4 you are using and on what machine, then briefly describe the steps required to reproduce the problem. If the problem is caused by a single video/audio file, if possible please provide the URL of the file, otherwise print the text output of MPlayer so that the video and audio codecs of the video can be seen. Crashlogs should be included as attachments.
+
+Thanks for your feedback!
+
+Varthall
+ 
