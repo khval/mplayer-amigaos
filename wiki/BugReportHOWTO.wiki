@@ -3,7 +3,7 @@
 
 = Introduction =
 
-This is a quick HOW-TO on how to open a bug report for this project. Please follow it carefully, otherwise your report might get rejected because of insufficient or wrong informations about the issue.
+This is a quick HOW-TO on how to open a bug report for MPlayer and/or MEncoder on AmigaOS 4. Please follow it carefully, otherwise your report might get rejected because of missing or wrong information about the issue.
 
 
 = Before opening an issue =
@@ -12,8 +12,15 @@ This is a quick HOW-TO on how to open a bug report for this project. Please foll
 
 - Make sure that there's no issue that already covers the problem you have found, make first a search among all the opened issues.
 
-- It is warmly recommended that you try to reproduce the problem on the latest version of MPlayer (which, at the moment, is the "Summer" version: http://os4depot.net/index.php?function=showfile&file=video/play/mplayer.lha ). If for any reason you prefer to use an older version and the problem can be reproduced only with it, please add a description on the reason the older version is preferred, if a feature is missing in the latest MPlayer, or it behaves worse in some condition, we'll try to fix this in the next version.
+- It is warmly recommended that you try to reproduce the problem on the latest version of MPlayer/MEncoder:
 
+     - the latest *MPlayer* version is  the *Summer* one, based on 1.0rc3, dated *22 Aug 09*: http://os4depot.net/index.php?function=showfile&file=video/play/mplayer.lha ;
+
+     - the latest *MEncoder* is *1.0rc2_02*: http://os4depot.net/index.php?function=showfile&file=video/edit/mencoder.lha .
+
+If for any reason you prefer to use an older version and the problem can be reproduced only with it, please add a description on the reason the older version is preferred, if a feature is missing in the latest version, or it behaves worse in some condition, we'll try to fix this in the next version.
+
+- No bug reports for the MPlayer GUI by Deniil.
 
 
 = How to open an issue =
@@ -22,7 +29,9 @@ This is a quick HOW-TO on how to open a bug report for this project. Please foll
 
 - _Summary_: Try to be as both descriptive and short as possible, e.g. "System freeze when resizing the window to the smallest size possible"
 
-- _Description_: please include the MPlayer version (e.g. _latest "Summer" version_, or  _MPlayer SVN-r29532-4.2.3_), this information is *required*, if it's missing the issue will be discarded. Report what version of OS4 you are using and on what machine, then briefly describe the steps required to reproduce the problem. If the problem is caused by a single video/audio file, if possible please provide the URL of the file, otherwise print the text output of MPlayer so that the video and audio codecs of the video can be seen; attachments have a 10 MB limit, not enough to send any video as an attachment. Crashlogs should be included as attachments, though, rather than pasted directly in the issue's description.
+- _Description_: please include the MPlayer/MEncoder version (e.g. _latest "Summer" version_, or  _MPlayer SVN-r29532-4.2.3_), this information is *required*, if it's missing the issue will be discarded. Report what version of OS4 you are using and on what machine, then briefly describe the steps required to reproduce the problem. If the command line version of the program has been used, please paste the command line used. If the problem is caused by a single video/audio file, if possible please provide the URL of the file, otherwise print the text output of MPlayer so that the video and audio codecs of the video can be seen; attachments have a 10 MB limit, not enough to send any video as an attachment. Crashlogs should be included as attachments, though, rather than pasted directly in the issue's description.
+
+Here's an example of an issue, as a reference: https://code.google.com/p/mplayer-amigaos/issues/detail?id=1
 
 Thanks for your feedback!
 
