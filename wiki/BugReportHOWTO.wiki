@@ -22,7 +22,7 @@ This is a quick HOW-TO on how to open a bug report for this project. Please foll
 
 - _Summary_: Try to be as both descriptive and short as possible, e.g. "System freeze when resizing the window to the smallest size possible"
 
-- _Description_: please include the MPlayer version (e.g. _latest "Summer" version_, or  _MPlayer SVN-r29532-4.2.3_), this information is *required*, if it's missing the issue will be discarded. Report what version of OS4 you are using and on what machine, then briefly describe the steps required to reproduce the problem. If the problem is caused by a single video/audio file, if possible please provide the URL of the file, otherwise print the text output of MPlayer so that the video and audio codecs of the video can be seen. Crashlogs should be included as attachments.
+- _Description_: please include the MPlayer version (e.g. _latest "Summer" version_, or  _MPlayer SVN-r29532-4.2.3_), this information is *required*, if it's missing the issue will be discarded. Report what version of OS4 you are using and on what machine, then briefly describe the steps required to reproduce the problem. If the problem is caused by a single video/audio file, if possible please provide the URL of the file, otherwise print the text output of MPlayer so that the video and audio codecs of the video can be seen; attachments have a 10 MB limit, not enough to send any video as an attachment. Crashlogs should be included as attachments, though, rather than pasted directly in the issue's description.
 
 Thanks for your feedback!
 
