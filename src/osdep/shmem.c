@@ -74,9 +74,14 @@ while(1){
 #endif
     break;
   case 1:  // ========= MAP_SHARED + /dev/zero ==========
+#ifndef __amigaos4__
     if (devzero == -1 && (devzero = open("/dev/zero", O_RDWR, 0)) == -1) break;
     p=mmap(0,size,PROT_READ|PROT_WRITE,MAP_SHARED,devzero,0);
     if(p==MAP_FAILED) break; // failed
+#else
+ 	p=malloc(size);
+    if(p=NULL) break; // failed
+#endif
     mp_dbg(MSGT_OSDEP, MSGL_DBG2, "shmem: %d bytes allocated using mmap /dev/zero (%p)\n",size,p);
     return p;
   case 2: { // ========= shmget() ==========
@@ -114,10 +119,14 @@ void shmem_free(void* p,int size){
   switch(shmem_type){
     case 0:
     case 1:
+#ifndef __amigaos4__
 	    if(munmap(p,size)) {
 		mp_msg(MSGT_OSDEP, MSGL_ERR, "munmap failed on %p %d bytes: %s\n",
 		    p,size,strerror(errno));
 	    }
+#else
+ 	    if (p) free(p);
+#endif
       break;
     case 2:
 #ifdef HAVE_SHM

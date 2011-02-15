@@ -3202,6 +3202,9 @@ int run_command(MPContext *mpctx, mp_cmd_t *cmd)
             if (sh_video) {
                 mp_msg(MSGT_GLOBAL, MSGL_INFO,
                        "ANS_SUB_VISIBILITY=%d\n", sub_visibility);
+#ifdef __amigaos4__
+ 				set_arexx_rc2(sub_visibility);
+#endif
             }
             break;
 
@@ -3225,6 +3228,9 @@ int run_command(MPContext *mpctx, mp_cmd_t *cmd)
         case MP_CMD_GET_TIME_LENGTH:{
                 mp_msg(MSGT_GLOBAL, MSGL_INFO, "ANS_LENGTH=%.2f\n",
                        demuxer_get_time_length(mpctx->demuxer));
+#ifdef __amigaos4__
+ 				set_arexx_rc2((long)(1000.0*demuxer_get_time_length(mpctx->demuxer)));
+#endif
             }
             break;
 
@@ -3355,11 +3361,17 @@ int run_command(MPContext *mpctx, mp_cmd_t *cmd)
         case MP_CMD_GET_VO_FULLSCREEN:
             if (mpctx->video_out && vo_config_count)
                 mp_msg(MSGT_GLOBAL, MSGL_INFO, "ANS_VO_FULLSCREEN=%d\n", vo_fs);
+#ifdef __amigaos4__
+ 			set_arexx_rc2(vo_fs);
+#endif
             break;
 
         case MP_CMD_GET_PERCENT_POS:
             mp_msg(MSGT_GLOBAL, MSGL_INFO, "ANS_PERCENT_POSITION=%d\n",
                    demuxer_get_percent_pos(mpctx->demuxer));
+#ifdef __amigaos4__
+ 			set_arexx_rc2(demuxer_get_percent_pos(mpctx->demuxer));
+#endif
             break;
 
         case MP_CMD_GET_TIME_POS:{
@@ -3371,15 +3383,20 @@ int run_command(MPContext *mpctx, mp_cmd_t *cmd)
                         playing_audio_pts(sh_audio, mpctx->d_audio,
                                           mpctx->audio_out);
                 mp_msg(MSGT_GLOBAL, MSGL_INFO, "ANS_TIME_POSITION=%.1f\n", pos);
+#ifdef __amigaos4__
+ 				set_arexx_rc2((long)(1000.0*pos));
+#endif
             }
             break;
 
         case MP_CMD_RUN:
-#ifndef __MINGW32__
+#if !defined(__MINGW32__) && !defined(__amigaos4__)
             if (!fork()) {
                 execl("/bin/sh", "sh", "-c", cmd->args[0].v.s, NULL);
                 exit(0);
             }
+#elif defined(__amigaos4__)
+ 			System(cmd->args[0].v.s,NULL);
 #endif
             break;
 

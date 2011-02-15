@@ -294,6 +294,7 @@ LIBDVDCSS_EXPORT dvdcss_t dvdcss_open ( char *psz_target )
         }
 #   endif
 
+#if !defined(__amigaos4__) && !defined(__MORPHOS__)
         if( psz_home == NULL )
         {
             psz_home = getenv( "HOME" );
@@ -302,6 +303,18 @@ LIBDVDCSS_EXPORT dvdcss_t dvdcss_open ( char *psz_target )
         {
             psz_home = getenv( "USERPROFILE" );
         }
+
+#else
+	    psz_home = "PROGDIR:conf/DVDKeys";
+
+        /* Cache our keys in ${HOME}/.dvdcss/ */
+        if( psz_home )
+        {
+		    snprintf( psz_buffer, PATH_MAX, "%s", psz_home );
+            psz_buffer[PATH_MAX-1] = '\0';
+            psz_cache = psz_buffer;
+        }
+#endif  /* !defined(__AMIGAOS4__) && !defined(__MORPHOS__) */
 
         /* Cache our keys in ${HOME}/.dvdcss/ */
         if( psz_home )

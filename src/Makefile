@@ -216,7 +216,7 @@ SRCS_COMMON-$(NATIVE_RTSP)           += stream/stream_rtsp.c \
                                         stream/librtsp/rtsp_session.c \
 
 SRCS_COMMON-$(NEED_GETTIMEOFDAY)     += osdep/gettimeofday.c
-SRCS_COMMON-$(NEED_GLOB)             += osdep/glob-win.c
+SRCS_COMMON-$(NEED_GLOB)             += osdep/glob-aos.c
 SRCS_COMMON-$(NEED_MMAP)             += osdep/mmap-os2.c
 SRCS_COMMON-$(NEED_SETENV)           += osdep/setenv.c
 SRCS_COMMON-$(NEED_SHMEM)            += osdep/shmem.c
@@ -279,7 +279,7 @@ SRCS_COMMON-$(TV_DSHOW)              += stream/tvi_dshow.c \
 SRCS_COMMON-$(TV_V4L1)               += stream/tvi_v4l.c  stream/audio_in.c
 SRCS_COMMON-$(TV_V4L2)               += stream/tvi_v4l2.c stream/audio_in.c
 SRCS_COMMON-$(UNRAR_EXEC)            += sub/unrar_exec.c
-SRCS_COMMON-$(VCD)                   += stream/stream_vcd.c
+SRCS_COMMON-$(VCD)                   += stream/stream_vcd_amigaos.c
 SRCS_COMMON-$(VORBIS)                += libmpcodecs/ad_libvorbis.c \
                                         libmpdemux/demux_ogg.c
 SRCS_COMMON-$(VSTREAM)               += stream/stream_vstream.c
@@ -342,7 +342,7 @@ SRCS_COMMON = asxparser.c \
               mp_msg.c \
               mpcommon.c \
               parser-cfg.c \
-              path.c \
+              get_path_amigaos.c \
               playtree.c \
               playtreeparser.c \
               subopt-helper.c \
@@ -617,6 +617,7 @@ SRCS_MPLAYER-$(NETWORKING)    += udp_sync.c
 SRCS_MPLAYER-$(OPENAL)        += libao2/ao_openal.c
 SRCS_MPLAYER-$(OSS)           += libao2/ao_oss.c
 SRCS_MPLAYER-$(PNM)           += libvo/vo_pnm.c
+SRCS_MPLAYER-$(P96PIP)        += libvo/vo_p96pip.c
 SRCS_MPLAYER-$(PULSE)         += libao2/ao_pulse.c
 SRCS_MPLAYER-$(QUARTZ)        += libvo/vo_quartz.c libvo/osx_common.c
 SRCS_MPLAYER-$(S3FB)          += libvo/vo_s3fb.c
@@ -673,6 +674,8 @@ SRCS_MPLAYER = command.c \
                mixer.c \
                mp_fifo.c \
                mplayer.c \
+               MPlayer-arexx.c \
+               amigaos_stuff.c \
                parser-mpcmd.c \
                pnm_loader.c \
                input/input.c \

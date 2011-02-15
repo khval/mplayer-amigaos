@@ -32,6 +32,10 @@
 #include <unistd.h>
 #include <errno.h>
 
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+#include <proto/dos.h>
+#endif
+
 #include "libmpcodecs/img_format.h"
 #include "libmpcodecs/mp_image.h"
 
@@ -239,7 +243,7 @@ static void draw(menu_t* menu, mp_image_t* mpi) {
 }
 
 static void check_child(menu_t* menu) {
-#ifndef __MINGW32__
+#if !defined(__MINGW32__) && !defined(__amigaos4__) && !defined(__MORPHOS__)
   fd_set rfd;
   struct timeval tv;
   int max_fd = mpriv->child_fd[2] > mpriv->child_fd[1] ? mpriv->child_fd[2] :
@@ -293,7 +297,33 @@ static void check_child(menu_t* menu) {
 #define close_pipe(pipe) close(pipe[0]); close(pipe[1])
 
 static int run_shell_cmd(menu_t* menu, char* cmd) {
-#ifndef __MINGW32__
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+  BPTR out;
+
+  mp_msg(MSGT_GLOBAL,MSGL_INFO,MSGTR_LIBMENU_ConsoleRun,cmd);
+
+  out = Open("T:mplayer_cmd_output", MODE_NEWFILE);
+
+  Execute(cmd, NULL, out ? out : Output());
+
+  if(out)
+  {
+   char line[1024];
+
+   Close(out);
+   out = Open("T:mplayer_cmd_output", MODE_OLDFILE);
+
+   if(out)
+   {
+	   while(FGets(out, line, sizeof(line)))
+	   {
+		   add_line(mpriv,line);
+	   }
+	   Close(out);
+   }
+   DeleteFile("T:mplayer_cmd_output");
+  }
+#elif !defined(__MINGW32__)
   int in[2],out[2],err[2];
 
   mp_msg(MSGT_GLOBAL,MSGL_INFO,MSGTR_LIBMENU_ConsoleRun,cmd);

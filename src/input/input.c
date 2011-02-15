@@ -68,7 +68,7 @@
 /// For the args, the first field is the type (actually int, float or string), the second
 /// is the default value wich is used for optional arguments
 
-static const mp_cmd_t mp_cmds[] = {
+const mp_cmd_t mp_cmds[] = {
 #ifdef CONFIG_RADIO
   { MP_CMD_RADIO_STEP_CHANNEL, "radio_step_channel", 1,  { { MP_CMD_ARG_INT ,{0}}, {-1,{0}} }},
   { MP_CMD_RADIO_SET_CHANNEL, "radio_set_channel", 1, { { MP_CMD_ARG_STRING, {0}}, {-1,{0}}  }},
@@ -1233,9 +1233,11 @@ static mp_cmd_t *read_events(int time, int paused)
 	    else
 		time_val = NULL;
 	    if (select(max_fd + 1, &fds, NULL, NULL, time_val) < 0) {
+#ifndef __amigaos4__
 		if (errno != EINTR)
 		    mp_msg(MSGT_INPUT, MSGL_ERR, MSGTR_INPUT_INPUT_ErrSelect,
 			    strerror(errno));
+#endif
 		FD_ZERO(&fds);
 	    }
 	}
