@@ -40,6 +40,13 @@
 #include "libswscale/swscale.h"
 #include "libavcodec/avcodec.h"
 
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+extern char *SCREENSHOTDIR;
+extern char *filename;
+
+#include <proto/dos.h>
+#endif
+
 struct vf_priv_s {
     int frameno;
     char fname[102];
@@ -113,14 +120,29 @@ static int fexists(char *fname)
 static void gen_fname(struct vf_priv_s* priv)
 {
     do {
-        snprintf (priv->fname, 100, "shot%04d.png", ++priv->frameno);
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+	   char buf[sizeof(priv->fname) - 13];
+	   #ifndef __amigaos4__
+		   stccpy(buf, FilePart(filename), sizeof(buf));
+		   snprintf (priv->fname, sizeof(priv->fname), "RAM:%s.%04d.png", buf, ++priv->frameno);
+	   #else
+		   strncpy(buf, FilePart(filename), sizeof(buf));
+		   snprintf (priv->fname, sizeof(priv->fname), "%s%s.%04d.png", SCREENSHOTDIR, buf, ++priv->frameno);
+	   #endif
+#else
+         snprintf (priv->fname, 100, "shot%04d.png", ++priv->frameno);
+#endif
     } while (fexists(priv->fname) && priv->frameno < 100000);
     if (fexists(priv->fname)) {
         priv->fname[0] = '\0';
         return;
     }
 
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+    mp_msg(MSGT_VFILTER,MSGL_STATUS,"Saved screenshot to '%s'\n",priv->fname);
+#else
     mp_msg(MSGT_VFILTER,MSGL_INFO,"*** screenshot '%s' ***\n",priv->fname);
+#endif
 
 }
 

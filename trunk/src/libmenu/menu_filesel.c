@@ -28,6 +28,12 @@
 #include <unistd.h>
 #include <limits.h>
 
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+#include <dos/dos.h>
+#include <dos/dosextens.h>
+#include <proto/dos.h>
+#endif
+
 
 #include "config.h"
 #include "mp_msg.h"
@@ -46,7 +52,11 @@
 #include "input/input.h"
 #include "osdep/keycodes.h"
 
+#if defined(__amigaos4__) || defined(__MORPHOS__)
+#define MENU_KEEP_PATH "PROGDIR:conf/menu_currentpath"
+#else
 #define MENU_KEEP_PATH "/tmp/mp_current_path"
+#endif
 
 int menu_keepdir = 0;
 char *menu_chroot = NULL;
@@ -150,6 +160,8 @@ static int mylstat(char *dir, char *file,struct stat* st) {
     strcpy(s, dir);
 #if HAVE_DOS_PATHS
     if (s[l] == '/' || s[l] == '\\')
+#elif defined(__MORPHOS__) || defined(__amigaos4__)
+   if (s[l] == '/' || s[l] == ':')
 #else
     if (s[l] == '/')
 #endif
@@ -158,13 +170,21 @@ static int mylstat(char *dir, char *file,struct stat* st) {
 #if HAVE_DOS_PATHS
     if (!slash)
       slash = strrchr(s,'\\');
+#elif defined(__MORPHOS__) || defined(__amigaos4__)
+    if (!slash)
+ 	  slash = strrchr(s,':');
 #endif
     if (!slash)
       return stat(dir,st);
     slash[1] = '\0';
     return stat(s,st);
   }
+#if defined(__MORPHOS__) || defined(__amigaos4__)
+  strcpy(s, dir);
+  AddPart(s, file, sizeof(s));
+#else
   sprintf(s,"%s/%s",dir,file);
+#endif
   return stat(s,st);
 }
 

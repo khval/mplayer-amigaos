@@ -139,10 +139,13 @@
 #include "stream/stream_dvd.h"
 #endif
 
+#ifdef __amigaos4__
+#include "amigaos_stuff.h"
+#endif
 
 int slave_mode=0;
-int player_idle_mode=0;
-int quiet=0;
+int player_idle_mode=1;
+int quiet=1;
 int enable_mouse_movements=0;
 float start_volume = -1;
 double start_pts = MP_NOPTS_VALUE;
@@ -348,6 +351,9 @@ static int crash_debug = 0;
 /* This header requires all the global variable declarations. */
 #include "cfg-mplayer.h"
 
+#ifdef __amigaos4__
+#include "MPlayer-rxget.c"
+#endif
 
 const void *mpctx_get_video_out(MPContext *mpctx)
 {
@@ -649,10 +655,13 @@ void uninit_player(unsigned int mask){
   }
 
   if(mask&INITIALIZED_VO){
-    initialized_flags&=~INITIALIZED_VO;
     current_module="uninit_vo";
     mpctx->video_out->uninit();
-    mpctx->video_out=NULL;
+    if (player_idle_mode==0) /*__amigaos4__*/
+    {
+        initialized_flags&=~INITIALIZED_VO;
+        mpctx->video_out=NULL;
+    }
 #ifdef CONFIG_DVDNAV
     mp_dvdnav_context_free(mpctx);
 #endif
@@ -778,6 +787,10 @@ void exit_player_with_rc(enum exit_reason how, int rc)
   }
   mp_msg(MSGT_CPLAYER,MSGL_DBG2,"max framesize was %d bytes\n",max_framesize);
 
+#ifdef __amigaos4__
+  AmigaOS_Close();
+#endif
+
   exit(rc);
 }
 
@@ -786,7 +799,7 @@ void exit_player(enum exit_reason how)
   exit_player_with_rc(how, 1);
 }
 
-#ifndef __MINGW32__
+#if !defined(__MINGW32__) && !defined(__amigaos4__)
 static void child_sighandler(int x){
   pid_t pid;
   while((pid=waitpid(-1,NULL,WNOHANG)) > 0);
@@ -2736,6 +2749,10 @@ int i;
 
 int gui_no_filename=0;
 
+#ifdef __amigaos4__
+  if (AmigaOS_Open(argc, argv) < 0) exit_player_with_rc(EXIT_QUIT,1);
+#endif
+
   common_preinit();
 
   // Create the config context and register the options
@@ -2772,7 +2789,22 @@ int gui_no_filename=0;
     if ( use_gui ) cfg_read();
 #endif
 
+#ifdef __amigaos4__
+  {
+    int new_argc;
+    char **new_argv;
+
+    AmigaOS_ParseArg(argc, argv, &new_argc, &new_argv);
+    if (new_argc<=0)
+    {
+        opt_exit=1;
+        exit_player_with_rc(EXIT_QUIT,1);
+    }
+    mpctx->playtree = m_config_parse_mp_command_line(mconfig, new_argc, new_argv);
+  }
+#else
     mpctx->playtree = m_config_parse_mp_command_line(mconfig, argc, argv);
+#endif
     if(mpctx->playtree == NULL)
       opt_exit = 1;
     else {
@@ -2813,7 +2845,7 @@ int gui_no_filename=0;
       use_gui=0;
     }
 #else
-#if !defined(__MINGW32__) && !defined(__CYGWIN__)
+#if !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(__amigaos4__)
     if(use_gui && !vo_init()){
       mp_msg(MSGT_CPLAYER,MSGL_WARN,MSGTR_GuiNeedsX);
       use_gui=0;
@@ -2902,7 +2934,11 @@ int gui_no_filename=0;
         exit_player_with_rc(EXIT_NONE, 1);
     }
 
+#ifndef __amigaos4__
     if(!filename && !player_idle_mode){
+#else
+    if(!filename){
+#endif
       if(!use_gui){
 	// no file/vcd/dvd -> show HELP:
 	mp_msg(MSGT_CPLAYER, MSGL_INFO, help_text);
@@ -2997,7 +3033,7 @@ initialized_flags|=INITIALIZED_INPUT;
 current_module = NULL;
 
   /// Catch signals
-#ifndef __MINGW32__
+#if !defined(__MINGW32__) && !defined(__amigaos4__)
   signal(SIGCHLD,child_sighandler);
 #endif
 
@@ -3951,6 +3987,13 @@ if(step_sec>0) {
                      cmd->args[0].v.s);
       }
       mp_cmd_free(cmd);
+      #ifdef __amigaos4__
+      if (brk_cmd==1)
+      {
+          brk_cmd=0;
+          mpctx->eof = 0;
+      }
+      #endif
       if (brk_cmd == 2)
 	  goto goto_enable_cache;
   }

@@ -33,6 +33,9 @@
 #endif
 #endif /* _MSC_VER */
 
+#ifdef __amigaos4__
+#include <unistd.h>
+#endif
 #include <inttypes.h>
 #include <limits.h>
 #include <sys/time.h>
