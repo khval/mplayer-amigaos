@@ -366,6 +366,7 @@ dvd_reader_t *DVDOpen( const char *ppath )
   }
 #endif
 
+#ifndef __amigaos4__
   ret = stat( path, &fileinfo );
 
   if( ret < 0 ) {
@@ -387,7 +388,9 @@ dvd_reader_t *DVDOpen( const char *ppath )
   if( S_ISBLK( fileinfo.st_mode ) ||
       S_ISCHR( fileinfo.st_mode ) ||
       S_ISREG( fileinfo.st_mode ) ) {
-
+#else
+  if (1) {
+#endif
     /**
      * Block devices and regular files are assumed to be DVD-Video images.
      */

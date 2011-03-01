@@ -189,7 +189,7 @@ TV_V4L  =
 TV_V4L1 = no
 TV_V4L2 = no
 TWOLAME=no
-UNRAR_EXEC = yes
+UNRAR_EXEC = no
 V4L2 = no
 VCD = yes
 VDPAU = no
@@ -284,7 +284,7 @@ CONFIG_VDPAU    = no
 CONFIG_XVMC     = no
 CONFIG_ZLIB     = yes
 
-HAVE_GNU_AS     = yes
+HAVE_GNU_AS     = no
 HAVE_PTHREADS   = yes
 HAVE_SHM        = no
 HAVE_W32THREADS = no
