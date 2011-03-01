@@ -722,12 +722,12 @@ SRCS_MENCODER = mencoder.c \
                 $(SRCS_MENCODER-yes)
 
 
-COMMON_LIBS-$(FFMPEG_A) += libavformat/libavformat.a \
-                           libavcodec/libavcodec.a   \
-                           libavcore/libavcore.a     \
-                           libavutil/libavutil.a     \
-                           libpostproc/libpostproc.a \
-                           libswscale/libswscale.a
+COMMON_LIBS-$(FFMPEG_A) += ffmpeg/libavformat/libavformat.a \
+                           ffmpeg/libavcodec/libavcodec.a   \
+                           ffmpeg/libavcore/libavcore.a     \
+                           ffmpeg/libavutil/libavutil.a     \
+                           ffmpeg/libpostproc/libpostproc.a \
+                           ffmpeg/libswscale/libswscale.a
 COMMON_LIBS += $(COMMON_LIBS-yes)
 
 OBJS_COMMON    += $(addsuffix .o, $(basename $(SRCS_COMMON)))
@@ -749,31 +749,31 @@ INSTALL_TARGETS-$(MENCODER) += install-mencoder install-mencoder-man
 INSTALL_TARGETS-$(MPLAYER)  += install-mplayer  install-mplayer-man
 
 DIRS =  . \
-        libavcodec \
-        libavcodec/alpha \
-        libavcodec/arm \
-        libavcodec/bfin \
-        libavcodec/mlib \
-        libavcodec/ppc \
-        libavcodec/sh4 \
-        libavcodec/sparc \
-        libavcodec/x86 \
-        libavcore \
-        libavformat \
-        libavutil \
-        libavutil/arm \
-        libavutil/bfin \
-        libavutil/ppc \
-        libavutil/sh4 \
-        libavutil/tomi \
-        libavutil/x86 \
-        libpostproc \
-        libswscale \
-        libswscale/bfin \
-        libswscale/mlib \
-        libswscale/ppc \
-        libswscale/sparc \
-        libswscale/x86 \
+        ffmpeg/libavcodec \
+        ffmpeg/libavcodec/alpha \
+        ffmpeg/libavcodec/arm \
+        ffmpeg/libavcodec/bfin \
+        ffmpeg/libavcodec/mlib \
+        ffmpeg/libavcodec/ppc \
+        ffmpeg/libavcodec/sh4 \
+        ffmpeg/libavcodec/sparc \
+        ffmpeg/libavcodec/x86 \
+        ffmpeg/libavcore \
+        ffmpeg/libavformat \
+        ffmpeg/libavutil \
+        ffmpeg/libavutil/arm \
+        ffmpeg/libavutil/bfin \
+        ffmpeg/libavutil/ppc \
+        ffmpeg/libavutil/sh4 \
+        ffmpeg/libavutil/tomi \
+        ffmpeg/libavutil/x86 \
+        ffmpeg/libpostproc \
+        ffmpeg/libswscale \
+        ffmpeg/libswscale/bfin \
+        ffmpeg/libswscale/mlib \
+        ffmpeg/libswscale/ppc \
+        ffmpeg/libswscale/sparc \
+        ffmpeg/libswscale/x86 \
         gui \
         gui/mplayer \
         gui/mplayer/gtk \

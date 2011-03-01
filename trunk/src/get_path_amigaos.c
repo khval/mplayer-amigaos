@@ -43,3 +43,12 @@ void set_codec_path(const char *path)
     strcpy(codec_path, path);
     needs_free = 1;
 }
+
+const char *mp_basename(const char *path)
+{
+    char *s;
+
+    s = strrchr(path, '/');
+    return s ? s + 1 : path;
+}
+

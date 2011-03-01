@@ -20,6 +20,9 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef __amigaos4__
+#include <proto/dos.h>
+#endif
 
 #include "config.h"
 #include "command.h"
