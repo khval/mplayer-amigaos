@@ -2346,6 +2346,23 @@ int reinit_video_chain(void) {
   }
 #endif
 
+#ifdef __amigaos4__
+#define MULTIPL_VALUE 16
+if ((mpctx->sh_video->disp_w % MULTIPL_VALUE) > 0)
+{
+      char horiz_exp[33], horiz_pos[33];
+      sprintf(horiz_exp, "%d", - (MULTIPL_VALUE - (mpctx->sh_video->disp_w % MULTIPL_VALUE)));
+      sprintf(horiz_pos, "%d", (MULTIPL_VALUE - (mpctx->sh_video->disp_w % MULTIPL_VALUE)) / 2);
+      char* vf_arg[] = {"w", horiz_exp, "h", "0", "x", horiz_pos, "y", "0", NULL};
+      mp_msg(MSGT_CPLAYER,MSGL_INFO,"AmigaOS4: expanding video as workaround for overlay limitation\n");
+      vf_instance_t* vf_exp = vf_open_filter(sh_video->vfilter,"expand",vf_arg);
+      if (vf_exp)
+        sh_video->vfilter=vf_exp;
+      else
+        mp_msg(MSGT_CPLAYER,MSGL_ERR, "AmigaOS4: cannot apply workaround for overlay limitation, video might play incorrectly\n");
+}
+#endif
+
   sh_video->vfilter=append_filters(sh_video->vfilter);
   eosd_init(sh_video->vfilter);
 
