@@ -1528,6 +1528,7 @@ if amigaos ; then
   _select=no
   _sighandler=no
   _stream_cache=no
+  _need_shmem=no
   def_stream_cache="#undef CONFIG_STREAM_CACHE"
   extra_cflags="-DNEWLIB -D__USE_INLINE__ $extra_cflags"
 fi
