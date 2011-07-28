@@ -13,7 +13,9 @@ ALTIVEC-OBJS-$(CONFIG_MP3FLOAT_DECODER)    += ppc/mpegaudiodec_altivec.o
 ALTIVEC-OBJS-$(CONFIG_MP3ON4FLOAT_DECODER) += ppc/mpegaudiodec_altivec.o
 ALTIVEC-OBJS-$(CONFIG_MP3ADUFLOAT_DECODER) += ppc/mpegaudiodec_altivec.o
 
-FFT-OBJS-$(HAVE_GNU_AS)                += ppc/fft_altivec_s.o           \
+# BEGIN AmigaOS4
+FFT-OBJS-$(HAVE_ALTIVEC)                += ppc/fft_altivec_s.o           \
+# END AmigaOS4
 
 ALTIVEC-OBJS-$(CONFIG_FFT)             += ppc/fft_altivec.o             \
                                           $(FFT-OBJS-yes)

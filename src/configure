@@ -4882,7 +4882,7 @@ fi
 echores "$_mng"
 if test "$_mng" = yes ; then
   def_mng='#define CONFIG_MNG 1'
-  extra_ldflags="$extra_ldflags -lmng -lz"
+  extra_ldflags="$extra_ldflags -lmng -ljpeg -llcms -lz"
 else
   def_mng='#undef CONFIG_MNG'
 fi

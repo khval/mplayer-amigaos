@@ -543,21 +543,32 @@ OBJS-$(CONFIG_LIBMP3LAME_ENCODER)         += libmp3lame.o
 OBJS-$(CONFIG_LIBOPENCORE_AMRNB_DECODER)  += libopencore-amr.o
 OBJS-$(CONFIG_LIBOPENCORE_AMRNB_ENCODER)  += libopencore-amr.o
 OBJS-$(CONFIG_LIBOPENCORE_AMRWB_DECODER)  += libopencore-amr.o
-OBJS-$(CONFIG_LIBOPENJPEG_DECODER)        += libopenjpeg.o
+
+# BEGIN AmigaOS4
+OBJS        += libopenjpeg.o
+# END AmigaOS4
+
 OBJS-$(CONFIG_LIBSCHROEDINGER_DECODER)    += libschroedingerdec.o \
                                              libschroedinger.o    \
                                              libdirac_libschro.o
 OBJS-$(CONFIG_LIBSCHROEDINGER_ENCODER)    += libschroedingerenc.o \
                                              libschroedinger.o    \
                                              libdirac_libschro.o
-OBJS-$(CONFIG_LIBSPEEX_DECODER)           += libspeexdec.o
-OBJS-$(CONFIG_LIBTHEORA_ENCODER)          += libtheoraenc.o
+
+# BEGIN AmigaOS4
+OBJS           += libspeexdec.o
+OBJS          += libtheoraenc.o
+# END AmigaOS4
+
 OBJS-$(CONFIG_LIBVORBIS_ENCODER)          += libvorbis.o vorbis_data.o
 OBJS-$(CONFIG_LIBVPX_DECODER)             += libvpxdec.o
 OBJS-$(CONFIG_LIBVPX_ENCODER)             += libvpxenc.o
 OBJS-$(CONFIG_LIBX264_ENCODER)            += libx264.o
 OBJS-$(CONFIG_LIBXAVS_ENCODER)            += libxavs.o
-OBJS-$(CONFIG_LIBXVID)                    += libxvidff.o libxvid_rc.o
+
+# BEGIN AmigaOS4
+OBJS                    += libxvidff.o libxvid_rc.o
+# END AmigaOS4
 
 # parsers
 OBJS-$(CONFIG_AAC_PARSER)              += aac_parser.o aac_ac3_parser.o \

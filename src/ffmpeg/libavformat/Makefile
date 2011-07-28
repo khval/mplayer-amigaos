@@ -294,8 +294,10 @@ OBJS-$(CONFIG_YUV4MPEGPIPE_MUXER)        += yuv4mpeg.o
 OBJS-$(CONFIG_YUV4MPEGPIPE_DEMUXER)      += yuv4mpeg.o
 
 # external libraries
-OBJS-$(CONFIG_LIBNUT_DEMUXER)            += libnut.o riff.o
-OBJS-$(CONFIG_LIBNUT_MUXER)              += libnut.o riff.o
+# BEGIN AmigaOS4
+OBJS            += libnut.o riff.o
+OBJS              += libnut.o riff.o
+# END AmigaOS4
 
 # protocols I/O
 OBJS+= avio.o aviobuf.o
