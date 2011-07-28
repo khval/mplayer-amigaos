@@ -31,7 +31,7 @@
 
 
 
-#define CONFIGURATION "--target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib"
+#define CONFIGURATION "--target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib"
 
 #define MPLAYER_DATADIR "PROGDIR:"
 #define MPLAYER_CONFDIR "PROGDIR:"
@@ -66,7 +66,7 @@
 /* system headers */
 #define HAVE_ALLOCA_H 1
 #undef HAVE_ALSA_ASOUNDLIB_H
-#define HAVE_ALTIVEC_H 1
+#define HAVE_ALTIVEC_H 0
 #define HAVE_MALLOC_H 1
 #undef HAVE_SYS_MMAN_H
 #define MAP_FAILED ((void *) -1)
@@ -161,7 +161,7 @@
 #define ARCH_X86_32 0
 #define ARCH_X86_64 0
 #define ARCH_PPC64 0
-#define HAVE_ALTIVEC 1
+#define HAVE_ALTIVEC 0
 #define HAVE_MMX 0
 #define HAVE_MMX2 0
 #define HAVE_AMD3DNOW 0
