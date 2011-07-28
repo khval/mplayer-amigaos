@@ -3,7 +3,7 @@
 # Ensure that locale settings do not interfere with shell commands.
 export LC_ALL = C
 
-CONFIGURATION = --disable-tv --enable-dvdnav --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ --extra-ldflags=-mcrt=newlib
+CONFIGURATION = --target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib
 
 CHARSET = UTF-8
 DOC_LANGS = en
@@ -27,8 +27,8 @@ INSTALL = install
 INSTALLSTRIP = -s
 WINDRES = windres
 
-CFLAGS   = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes -Wdisabled-optimization -Wno-pointer-sign -Wdeclaration-after-statement -std=gnu99  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include 
-CXXFLAGS = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include  
+CFLAGS   = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes -Wdisabled-optimization -Wno-pointer-sign -Wdeclaration-after-statement -std=gnu99  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include 
+CXXFLAGS = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include  
 CC_DEPFLAGS = -MD -MP -O4    -ffast-math -fomit-frame-pointer
 
 CFLAGS_DHAHELPER         = 
@@ -41,9 +41,9 @@ CFLAGS_STACKREALIGN      =
 CFLAGS_SVGALIB_HELPER    = 
 CFLAGS_TREMOR_LOW        = 
 
-EXTRALIBS          = -Wl,-z,noexecstack -mcrt=newlib -ffast-math   -lpng -lz -ljpeg -lungif -L/SDK/local/newlib/lib -lfreetype -lz -lz -lbz2 -llzo2 -lmad -lvorbis -logg -lspeex -lmpg123 -lopencore-amrnb -lopencore-amrwb -lvpx -lnut     -static -lm -mcrt
-EXTRALIBS_MPLAYER  =  -lSDL -lfaac -lmp3lame
-EXTRALIBS_MENCODER =  -lfaac -lmp3lame
+EXTRALIBS          = -Wl,-z,noexecstack -mcrt=newlib -ffast-math -lpng -lmng -lz -ljpeg -lgif -llcms -L/SDK/local/newlib/lib -lfreetype -lz -lbz2 -llzo2 -lmad -lspeex -lfaad -L/SDK/local/newlib/lib -ltheora -lvorbis -lvorbisenc -logg -lmpg123 -lxvidcore -lopenjpeg -lvpx -lpthread -lnut -lopencore-amrnb -lopencore-amrwb -lpthread -static -lm
+EXTRALIBS_MPLAYER  =  -lSDL -lfaac -lmp3lame -lauto
+EXTRALIBS_MENCODER =  -lfaac -lmp3lame -lauto
 
 GETCH = getch2.c
 HELP_FILE = help/help_mp-en.h
@@ -53,47 +53,9 @@ EXESUF      =
 EXESUFS_ALL = .exe
 
 ARCH = ppc
-ARCH_X86 = yes
-ARCH_IA64 = yes
-ARCH_SPARC = yes
-ARCH_ARM = yes
-ARCH_AVR32 = yes
-ARCH_SH4 = yes
 ARCH_PPC = yes
-ARCH_ALPHA = yes
-ARCH_MIPS = yes
-ARCH_PA_RISC = yes
-ARCH_S390 = yes
-ARCH_S390X = yes
-ARCH_VAX = yes
-ARCH_BFIN = yes
-ARCH_XTENSA = yes
-ARCH_TOMI = yes
-ARCH_GENERIC = yes
-ARCH_X86_32 = yes
-ARCH_X86_64 = yes
-ARCH_PPC64 = yes
-HAVE_ALTIVEC = yes
-HAVE_MMX = yes
-HAVE_MMX2 = yes
-HAVE_AMD3DNOW = yes
-HAVE_AMD3DNOWEXT = yes
-HAVE_SSE = yes
-HAVE_SSE2 = yes
-HAVE_SSSE3 = yes
-HAVE_FAST_CMOV = yes
-HAVE_CMOV = yes
+
 HAVE_FAST_CLZ = yes
-HAVE_PLD = yes
-HAVE_ARMV5TE = yes
-HAVE_ARMV6 = yes
-HAVE_ARMV6T2 = yes
-HAVE_ARMVFP = yes
-HAVE_NEON = yes
-HAVE_IWMMXT = yes
-HAVE_MMI = yes
-HAVE_VIS = yes
-HAVE_MVI = yes
 
 MENCODER = yes
 MPLAYER  = yes
@@ -131,8 +93,8 @@ DIRECTFB = no
 DIRECTX = auto
 DVBIN = no
 DVDNAV = yes
-DVDNAV_INTERNAL = no
-DVDREAD = no
+DVDNAV_INTERNAL = yes
+DVDREAD = yes
 DVDREAD_INTERNAL = yes
 DXR2 = no
 DXR3 = no
@@ -268,6 +230,8 @@ XVMC = no
 XVR100 = no
 YUV4MPEG = yes
 ZR = no
+
+P96PIP = yes
 
 # FFmpeg
 FFMPEG     = yes

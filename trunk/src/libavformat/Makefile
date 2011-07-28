@@ -219,7 +219,9 @@ OBJS-$(CONFIG_ROQ_MUXER)                 += idroqenc.o rawenc.o
 OBJS-$(CONFIG_RSO_DEMUXER)               += rsodec.o rso.o pcm.o
 OBJS-$(CONFIG_RSO_MUXER)                 += rsoenc.o rso.o
 OBJS-$(CONFIG_RPL_DEMUXER)               += rpl.o
-OBJS-$(CONFIG_RTP_MUXER)                 += rtp.o         \
+
+# BEGIN AmigaOS4
+OBJS                 += rtp.o         \
                                             rtpenc_aac.o     \
                                             rtpenc_amr.o     \
                                             rtpenc_h263.o    \
@@ -229,6 +231,8 @@ OBJS-$(CONFIG_RTP_MUXER)                 += rtp.o         \
                                             rtpenc_vp8.o  \
                                             rtpenc_xiph.o \
                                             avc.o
+# END AmigaOS4
+
 OBJS-$(CONFIG_RTPDEC)                    += rdt.o         \
                                             rtp.o         \
                                             rtpdec.o      \
@@ -243,9 +247,13 @@ OBJS-$(CONFIG_RTPDEC)                    += rdt.o         \
                                             rtpdec_svq3.o \
                                             rtpdec_vp8.o  \
                                             rtpdec_xiph.o
-OBJS-$(CONFIG_RTSP_DEMUXER)              += rtsp.o rtspdec.o httpauth.o
-OBJS-$(CONFIG_RTSP_MUXER)                += rtsp.o rtspenc.o httpauth.o \
+
+# BEGIN AmigaOS4
+OBJS              += rtsp.o rtspdec.o httpauth.o
+OBJS                += rtsp.o rtspenc.o httpauth.o \
                                             rtpenc_chain.o
+# END AmigaOS4
+
 OBJS-$(CONFIG_SAP_DEMUXER)               += sapdec.o
 OBJS-$(CONFIG_SAP_MUXER)                 += sapenc.o rtpenc_chain.o
 OBJS-$(CONFIG_SDP_DEMUXER)               += rtsp.o
@@ -294,8 +302,10 @@ OBJS-$(CONFIG_YUV4MPEGPIPE_MUXER)        += yuv4mpeg.o
 OBJS-$(CONFIG_YUV4MPEGPIPE_DEMUXER)      += yuv4mpeg.o
 
 # external libraries
-OBJS-$(CONFIG_LIBNUT_DEMUXER)            += libnut.o riff.o
-OBJS-$(CONFIG_LIBNUT_MUXER)              += libnut.o riff.o
+# BEGIN AmigaOS4
+OBJS            += libnut.o riff.o
+OBJS              += libnut.o riff.o
+# END AmigaOS4
 
 # protocols I/O
 OBJS+= avio.o aviobuf.o

@@ -31,7 +31,7 @@
 
 
 
-#define CONFIGURATION "--disable-tv --enable-dvdnav --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ --extra-ldflags=-mcrt=newlib"
+#define CONFIGURATION "--target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib"
 
 #define MPLAYER_DATADIR "PROGDIR:"
 #define MPLAYER_CONFDIR "PROGDIR:"
@@ -66,7 +66,7 @@
 /* system headers */
 #define HAVE_ALLOCA_H 1
 #undef HAVE_ALSA_ASOUNDLIB_H
-#define HAVE_ALTIVEC_H 0
+#define HAVE_ALTIVEC_H 1
 #define HAVE_MALLOC_H 1
 #undef HAVE_SYS_MMAN_H
 #define MAP_FAILED ((void *) -1)
@@ -141,47 +141,47 @@
 #define HAVE_EBX_AVAILABLE 0
 #define WORDS_BIGENDIAN 1
 #define HAVE_BIGENDIAN 1
-#define ARCH_X86 1
-#define ARCH_IA64 1
-#define ARCH_SPARC 1
-#define ARCH_ARM 1
-#define ARCH_AVR32 1
-#define ARCH_SH4 1
+#define ARCH_X86 0
+#define ARCH_IA64 0
+#define ARCH_SPARC 0
+#define ARCH_ARM 0
+#define ARCH_AVR32 0
+#define ARCH_SH4 0
 #define ARCH_PPC 1
-#define ARCH_ALPHA 1
-#define ARCH_MIPS 1
-#define ARCH_PA_RISC 1
-#define ARCH_S390 1
-#define ARCH_S390X 1
-#define ARCH_VAX 1
-#define ARCH_BFIN 1
-#define ARCH_XTENSA 1
-#define ARCH_TOMI 1
-#define ARCH_GENERIC 1
-#define ARCH_X86_32 1
-#define ARCH_X86_64 1
-#define ARCH_PPC64 1
+#define ARCH_ALPHA 0
+#define ARCH_MIPS 0
+#define ARCH_PA_RISC 0
+#define ARCH_S390 0
+#define ARCH_S390X 0
+#define ARCH_VAX 0
+#define ARCH_BFIN 0
+#define ARCH_XTENSA 0
+#define ARCH_TOMI 0
+#define ARCH_GENERIC 0
+#define ARCH_X86_32 0
+#define ARCH_X86_64 0
+#define ARCH_PPC64 0
 #define HAVE_ALTIVEC 1
-#define HAVE_MMX 1
-#define HAVE_MMX2 1
-#define HAVE_AMD3DNOW 1
-#define HAVE_AMD3DNOWEXT 1
-#define HAVE_SSE 1
-#define HAVE_SSE2 1
-#define HAVE_SSSE3 1
-#define HAVE_FAST_CMOV 1
-#define HAVE_CMOV 1
+#define HAVE_MMX 0
+#define HAVE_MMX2 0
+#define HAVE_AMD3DNOW 0
+#define HAVE_AMD3DNOWEXT 0
+#define HAVE_SSE 0
+#define HAVE_SSE2 0
+#define HAVE_SSSE3 0
+#define HAVE_FAST_CMOV 0
+#define HAVE_CMOV 0
 #define HAVE_FAST_CLZ 1
-#define HAVE_PLD 1
-#define HAVE_ARMV5TE 1
-#define HAVE_ARMV6 1
-#define HAVE_ARMV6T2 1
-#define HAVE_ARMVFP 1
-#define HAVE_NEON 1
-#define HAVE_IWMMXT 1
-#define HAVE_MMI 1
-#define HAVE_VIS 1
-#define HAVE_MVI 1
+#define HAVE_PLD 0
+#define HAVE_ARMV5TE 0
+#define HAVE_ARMV6 0
+#define HAVE_ARMV6T2 0
+#define HAVE_ARMVFP 0
+#define HAVE_NEON 0
+#define HAVE_IWMMXT 0
+#define HAVE_MMI 0
+#define HAVE_VIS 0
+#define HAVE_MVI 0
 
 
 /* Blu-ray/DVD/VCD/CD */
@@ -564,7 +564,7 @@
 #define CONFIG_H263_DECODER 1
 #define CONFIG_H263I_DECODER 1
 #define CONFIG_H264_DECODER 1
-#define CONFIG_H264_VDPAU_DECODER 1
+#define CONFIG_H264_VDPAU_DECODER 0
 #define CONFIG_HUFFYUV_DECODER 1
 #define CONFIG_IDCIN_DECODER 1
 #define CONFIG_IFF_BYTERUN1_DECODER 1
@@ -583,14 +583,14 @@
 #define CONFIG_MJPEGB_DECODER 1
 #define CONFIG_MMVIDEO_DECODER 1
 #define CONFIG_MOTIONPIXELS_DECODER 1
-#define CONFIG_MPEG_XVMC_DECODER 1
+#define CONFIG_MPEG_XVMC_DECODER 0
 #define CONFIG_MPEG1VIDEO_DECODER 1
 #define CONFIG_MPEG2VIDEO_DECODER 1
 #define CONFIG_MPEG4_DECODER 1
-#define CONFIG_MPEG4_VDPAU_DECODER 1
+#define CONFIG_MPEG4_VDPAU_DECODER 0
 #define CONFIG_MPEGVIDEO_DECODER 1
-#define CONFIG_MPEG_VDPAU_DECODER 1
-#define CONFIG_MPEG1_VDPAU_DECODER 1
+#define CONFIG_MPEG_VDPAU_DECODER 0
+#define CONFIG_MPEG1_VDPAU_DECODER 0
 #define CONFIG_MSMPEG4V1_DECODER 1
 #define CONFIG_MSMPEG4V2_DECODER 1
 #define CONFIG_MSMPEG4V3_DECODER 1
@@ -643,7 +643,7 @@
 #define CONFIG_V210X_DECODER 1
 #define CONFIG_VB_DECODER 1
 #define CONFIG_VC1_DECODER 1
-#define CONFIG_VC1_VDPAU_DECODER 1
+#define CONFIG_VC1_VDPAU_DECODER 0
 #define CONFIG_VCR1_DECODER 1
 #define CONFIG_VMDVIDEO_DECODER 1
 #define CONFIG_VMNC_DECODER 1
@@ -657,7 +657,7 @@
 #define CONFIG_WMV1_DECODER 1
 #define CONFIG_WMV2_DECODER 1
 #define CONFIG_WMV3_DECODER 1
-#define CONFIG_WMV3_VDPAU_DECODER 1
+#define CONFIG_WMV3_VDPAU_DECODER 0
 #define CONFIG_WNV1_DECODER 1
 #define CONFIG_XAN_WC3_DECODER 1
 #define CONFIG_XL_DECODER 1
@@ -680,8 +680,8 @@
 #define CONFIG_DSICINAUDIO_DECODER 1
 #define CONFIG_EAC3_DECODER 1
 #define CONFIG_FLAC_DECODER 1
-#define CONFIG_GSM_DECODER 1
-#define CONFIG_GSM_MS_DECODER 1
+#define CONFIG_GSM_DECODER 0
+#define CONFIG_GSM_MS_DECODER 0
 #define CONFIG_IMC_DECODER 1
 #define CONFIG_MACE3_DECODER 1
 #define CONFIG_MACE6_DECODER 1
@@ -783,13 +783,13 @@
 #define CONFIG_DVDSUB_DECODER 1
 #define CONFIG_PGSSUB_DECODER 1
 #define CONFIG_XSUB_DECODER 1
-#define CONFIG_LIBDIRAC_DECODER 1
-#define CONFIG_LIBGSM_DECODER 1
-#define CONFIG_LIBGSM_MS_DECODER 1
+#define CONFIG_LIBDIRAC_DECODER 0
+#define CONFIG_LIBGSM_DECODER 0
+#define CONFIG_LIBGSM_MS_DECODER 0
 #define CONFIG_LIBOPENCORE_AMRNB_DECODER 1
 #define CONFIG_LIBOPENCORE_AMRWB_DECODER 1
 #define CONFIG_LIBOPENJPEG_DECODER 1
-#define CONFIG_LIBSCHROEDINGER_DECODER 1
+#define CONFIG_LIBSCHROEDINGER_DECODER 0
 #define CONFIG_LIBSPEEX_DECODER 1
 #define CONFIG_LIBVPX_DECODER 1
 #define CONFIG_A64MULTI_ENCODER 1
@@ -886,25 +886,25 @@
 #define CONFIG_DVBSUB_ENCODER 1
 #define CONFIG_DVDSUB_ENCODER 1
 #define CONFIG_XSUB_ENCODER 1
-#define CONFIG_LIBDIRAC_ENCODER 1
+#define CONFIG_LIBDIRAC_ENCODER 0
 #define CONFIG_LIBFAAC_ENCODER 1
-#define CONFIG_LIBGSM_ENCODER 1
-#define CONFIG_LIBGSM_MS_ENCODER 1
+#define CONFIG_LIBGSM_ENCODER 0
+#define CONFIG_LIBGSM_MS_ENCODER 0
 #define CONFIG_LIBMP3LAME_ENCODER 1
 #define CONFIG_LIBOPENCORE_AMRNB_ENCODER 1
-#define CONFIG_LIBSCHROEDINGER_ENCODER 1
+#define CONFIG_LIBSCHROEDINGER_ENCODER 0
 #define CONFIG_LIBTHEORA_ENCODER 1
 #define CONFIG_LIBVORBIS_ENCODER 1
 #define CONFIG_LIBVPX_ENCODER 1
-#define CONFIG_LIBX264_ENCODER 1
-#define CONFIG_LIBXAVS_ENCODER 1
+#define CONFIG_LIBX264_ENCODER 0
+#define CONFIG_LIBXAVS_ENCODER 0
 #define CONFIG_LIBXVID_ENCODER 1
 #define CONFIG_AAC_PARSER 1
 #define CONFIG_AAC_LATM_PARSER 1
 #define CONFIG_AC3_PARSER 1
 #define CONFIG_CAVSVIDEO_PARSER 1
 #define CONFIG_DCA_PARSER 1
-#define CONFIG_DIRAC_PARSER 1
+#define CONFIG_DIRAC_PARSER 0
 #define CONFIG_DNXHD_PARSER 1
 #define CONFIG_DVBSUB_PARSER 1
 #define CONFIG_DVDSUB_PARSER 1
@@ -933,7 +933,7 @@
 #define CONFIG_ASS_DEMUXER 1
 #define CONFIG_AU_DEMUXER 1
 #define CONFIG_AVI_DEMUXER 1
-#define CONFIG_AVISYNTH_DEMUXER 1
+#define CONFIG_AVISYNTH_DEMUXER 0
 #define CONFIG_AVS_DEMUXER 1
 #define CONFIG_BETHSOFTVID_DEMUXER 1
 #define CONFIG_BFI_DEMUXER 1
@@ -943,7 +943,7 @@
 #define CONFIG_CAVSVIDEO_DEMUXER 1
 #define CONFIG_CDG_DEMUXER 1
 #define CONFIG_DAUD_DEMUXER 1
-#define CONFIG_DIRAC_DEMUXER 1
+#define CONFIG_DIRAC_DEMUXER 0
 #define CONFIG_DNXHD_DEMUXER 1
 #define CONFIG_DSICIN_DEMUXER 1
 #define CONFIG_DTS_DEMUXER 1
@@ -959,7 +959,7 @@
 #define CONFIG_FLV_DEMUXER 1
 #define CONFIG_FOURXM_DEMUXER 1
 #define CONFIG_G722_DEMUXER 1
-#define CONFIG_GSM_DEMUXER 1
+#define CONFIG_GSM_DEMUXER 0
 #define CONFIG_GXF_DEMUXER 1
 #define CONFIG_H261_DEMUXER 1
 #define CONFIG_H263_DEMUXER 1
@@ -1078,7 +1078,7 @@
 #define CONFIG_CAVSVIDEO_MUXER 1
 #define CONFIG_CRC_MUXER 1
 #define CONFIG_DAUD_MUXER 1
-#define CONFIG_DIRAC_MUXER 1
+#define CONFIG_DIRAC_MUXER 0
 #define CONFIG_DNXHD_MUXER 1
 #define CONFIG_DTS_MUXER 1
 #define CONFIG_DV_MUXER 1
@@ -1148,8 +1148,8 @@
 #define CONFIG_RM_MUXER 1
 #define CONFIG_ROQ_MUXER 1
 #define CONFIG_RSO_MUXER 1
-#define CONFIG_RTP_MUXER 1
-#define CONFIG_RTSP_MUXER 1
+#define CONFIG_RTP_MUXER 0
+#define CONFIG_RTSP_MUXER 0
 #define CONFIG_SAP_MUXER 1
 #define CONFIG_SOX_MUXER 1
 #define CONFIG_SPDIF_MUXER 1
@@ -1193,15 +1193,17 @@
 #define CONFIG_NOISE_BSF 1
 #define CONFIG_REMOVE_EXTRADATA_BSF 1
 #define CONFIG_TEXT2MOVSUB_BSF 1
-#define CONFIG_H263_VAAPI_HWACCEL 1
-#define CONFIG_H264_DXVA2_HWACCEL 1
-#define CONFIG_H264_VAAPI_HWACCEL 1
-#define CONFIG_MPEG2_DXVA2_HWACCEL 1
-#define CONFIG_MPEG2_VAAPI_HWACCEL 1
-#define CONFIG_MPEG4_VAAPI_HWACCEL 1
-#define CONFIG_VC1_DXVA2_HWACCEL 1
-#define CONFIG_VC1_VAAPI_HWACCEL 1
-#define CONFIG_WMV3_DXVA2_HWACCEL 1
-#define CONFIG_WMV3_VAAPI_HWACCEL 1
+#define CONFIG_H263_VAAPI_HWACCEL 0
+#define CONFIG_H264_DXVA2_HWACCEL 0
+#define CONFIG_H264_VAAPI_HWACCEL 0
+#define CONFIG_MPEG2_DXVA2_HWACCEL 0
+#define CONFIG_MPEG2_VAAPI_HWACCEL 0
+#define CONFIG_MPEG4_VAAPI_HWACCEL 0
+#define CONFIG_VC1_DXVA2_HWACCEL 0
+#define CONFIG_VC1_VAAPI_HWACCEL 0
+#define CONFIG_WMV3_DXVA2_HWACCEL 0
+#define CONFIG_WMV3_VAAPI_HWACCEL 0
+
+#define CONFIG_P96PIP 1
 
 #endif /* MPLAYER_CONFIG_H */

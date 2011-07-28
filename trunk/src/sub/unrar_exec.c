@@ -47,6 +47,10 @@ static FILE* launch_pipe(pid_t *apid, const char *executable, int action,
     int mypipe[2];
     pid_t pid;
 
+#ifdef __amigaos4__
+        mp_msg(MSGT_GLOBAL, MSGL_ERR, "UnRAR: No pipe support yet in AmigaOS 4 version, aborting.\n");
+        return NULL;
+#else
     if (pipe(mypipe)) {
         mp_msg(MSGT_GLOBAL, MSGL_ERR, "UnRAR: Cannot create pipe.\n");
         return NULL;
@@ -90,6 +94,7 @@ static FILE* launch_pipe(pid_t *apid, const char *executable, int action,
                "UnRAR: call unrar with command line: %s p -inul -p- %s %s\n",
                executable, archive, filename);
     return fdopen(mypipe[0], "r");
+#endif // __amigaos4__
   }
 }
 
