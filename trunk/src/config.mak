@@ -3,7 +3,7 @@
 # Ensure that locale settings do not interfere with shell commands.
 export LC_ALL = C
 
-CONFIGURATION = --target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib
+CONFIGURATION = --target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir=PROGDIR: --confdir=PROGDIR: --libdir=PROGDIR: --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags=-mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/ --extra-ldflags=-mcrt=newlib
 
 CHARSET = UTF-8
 DOC_LANGS = en
@@ -27,8 +27,8 @@ INSTALL = install
 INSTALLSTRIP = -s
 WINDRES = windres
 
-CFLAGS   = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes -Wdisabled-optimization -Wno-pointer-sign -Wdeclaration-after-statement -std=gnu99  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include 
-CXXFLAGS = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include  
+CFLAGS   = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls -Wstrict-prototypes -Wmissing-prototypes -Wdisabled-optimization -Wno-pointer-sign -Wdeclaration-after-statement -std=gnu99  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include 
+CXXFLAGS = -Wundef -Wall -Wno-switch -Wno-parentheses -Wpointer-arith -Wredundant-decls  -O4    -ffast-math -fomit-frame-pointer -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNEWLIB -D__USE_INLINE__ -I. -Iffmpeg -mcrt=newlib -mstrict-align -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/   -I/SDK/local/common/include/freetype2 -I/SDK/local/common/include  
 CC_DEPFLAGS = -MD -MP -O4    -ffast-math -fomit-frame-pointer
 
 CFLAGS_DHAHELPER         = 

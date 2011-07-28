@@ -599,7 +599,11 @@ user_correct_pts = 0;
   // Preparse the command line
   m_config_preparse_command_line(mconfig,argc,argv);
 
+#ifdef (__amigaos4__)
+  print_version("MEncoder-AmigaOS");
+#else
   print_version("MEncoder");
+#endif
 
  parse_cfgfiles(mconfig);
  filelist = m_config_parse_me_command_line(mconfig, argc, argv);

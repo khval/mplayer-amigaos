@@ -2838,7 +2838,11 @@ int gui_no_filename=0;
     }
     }
 
+#ifdef (__amigaos4__)
+  print_version("MPlayer-AmigaOS");
+#else
   print_version("MPlayer");
+#endif
 #if (defined(__MINGW32__) || defined(__CYGWIN__)) && defined(CONFIG_GUI)
     void *runningmplayer = FindWindow("MPlayer GUI for Windows", "MPlayer for Windows");
     if (runningmplayer && filename && use_gui) {
