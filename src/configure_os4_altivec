@@ -1,2 +1,3 @@
 ./configure --target=ppc-amigaos --disable-tv --enable-dvdnav --enable-dvdread --enable-dvdread-internal --enable-libdvdcss-internal --enable-menu --enable-pthreads --disable-inet6 --enable-big-endian --enable-static --disable-tremor-internal --disable-libdirac-lavc --disable-libschroedinger-lavc --disable-libgsm --disable-vdpau --disable-xvmc --disable-sighandler --datadir="PROGDIR:" --confdir="PROGDIR:" --libdir="PROGDIR:" --bindir=/SDK/Local/C --prefix=/SDK/Local --extra-libs=-mcrt=newlib --extra-cflags="-mcrt=newlib -mstrict-align -maltivec -I/SDK/Include/include_h/ -I/SDK/newlib/include/ -I/SDK/Local/newlib/include/ -I/SDK/Local/common/include/ -Ilibdvdread4/ -Ilibdvdnav/" --extra-ldflags="-mcrt=newlib"
-
+patch config.h diff_amigaos4/config.h_altivec_diff
+patch config.mak diff_amigaos4/config.mak_altivec_diff
