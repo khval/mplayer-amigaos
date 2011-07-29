@@ -42,7 +42,9 @@
 
 #if defined(__MORPHOS__) || defined(__amigaos4__)
 extern char *SCREENSHOTDIR;
-extern char *filename;
+
+//vh extern char *filename;
+char *filename;
 
 #include <proto/dos.h>
 #endif

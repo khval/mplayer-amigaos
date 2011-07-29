@@ -36,7 +36,7 @@
 const char version[] = "$VER: MPlayer for AmigaOS4 " VERSION ;
 const char STACK[] __attribute((used))   = "$STACK: 5000000";
 
-char *SCREENSHOTDIR = "RAM:";
+extern char *SCREENSHOTDIR;
 char *EXTPATTERN = "(#?.avi|#?.mpg|#?.mpeg|#?.asf|#?.wmv|#?.vob|#?.rm|#?.mov|#?.mp3|#?.ogg|#?.wav|#?.wmv|#?.wma|#?.flv|#?.asf|#?.mp4)";
 
 struct Process *p = NULL; 	//this to remove
