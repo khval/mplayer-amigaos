@@ -135,6 +135,7 @@ extern const vo_functions_t video_out_corevideo;
 extern const vo_functions_t video_out_quartz;
 extern const vo_functions_t video_out_pnm;
 extern const vo_functions_t video_out_md5sum;
+extern const vo_functions_t video_out_p96;
 extern const vo_functions_t video_out_p96_pip;
 
 /* The following declarations are _not_ const because functions pointers
@@ -149,6 +150,9 @@ extern vo_functions_t video_out_xvidix;
 
 const vo_functions_t* const video_out_drivers[] =
 {
+#ifdef CONFIG_P96
+ 		&video_out_p96,
+#endif
 #ifdef CONFIG_P96PIP
  		&video_out_p96_pip,
 #endif

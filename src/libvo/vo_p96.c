@@ -1,8 +1,8 @@
 /*
- *  vo_p96_pip.c
+ *  vo_p96.c
  *  VO module for MPlayer AmigaOS4
- *  using p96 PIP
- *  Writen by Jörg strohmayer
+ *  using p96
+ *  Written by Varthall and Jörg Strohmayer
 */
 
 #undef __USE_INLINE__
@@ -76,14 +76,10 @@
 #include "input/input.h"
 #include "../libmpdemux/demuxer.h"
 
-#include "vo_p96pip.h"
+#include "vo_p96.h"
 
 #include <assert.h>
 #undef CONFIG_GUI
-
-#ifdef CONFIG_GUI
-#include "vo_p96pip_gui.c"
-#endif
 
 #define MIN_WIDTH 290
 #define MIN_HEIGHT 217
@@ -91,64 +87,64 @@
 extern int player_idle_mode;
 
 /***************************/
-static BOOL p96pip_GiveArg(const char *arg)
+static BOOL p96_GiveArg(const char *arg)
 {
     // Default settings
-    p96pip_BorderMode  = ALWAYSBORDER;
+    p96_BorderMode  = ALWAYSBORDER;
 
     if ( (arg) )
     {
-        if (!(memcmp(arg, "NOBORDER", strlen("NOBORDER") ) ) ) p96pip_BorderMode = NOBORDER;
-        else if (!(memcmp(arg, "TINYBORDER", strlen("TINYBORDER") ) ) ) p96pip_BorderMode = TINYBORDER;
+        if (!(memcmp(arg, "NOBORDER", strlen("NOBORDER") ) ) ) p96_BorderMode = NOBORDER;
+        else if (!(memcmp(arg, "TINYBORDER", strlen("TINYBORDER") ) ) ) p96_BorderMode = TINYBORDER;
     }
 
     return TRUE;
 }
 
 /***************************/
-static BOOL p96pip_OpenOSLibs(void)
+static BOOL p96_OpenOSLibs(void)
 {
     if (!(P96Base = IExec->OpenLibrary(P96NAME, 2)))
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
     if (!(IP96 = (struct P96IFace*) IExec->GetInterface(P96Base, "main", 1, NULL)))
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
     if ( ! (LayersBase = IExec->OpenLibrary("layers.library", 0L) ) )
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
     ILayers = (struct LayersIFace*) IExec->GetInterface( (struct Library*)LayersBase, "main", 1, NULL );
     if (!ILayers)
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
     if ( ! (GadToolsBase = (struct Library *) IExec->OpenLibrary("gadtools.library",0UL)) )
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
     IGadTools = (struct GadToolsIFace *) IExec->GetInterface(GadToolsBase,"main",1,0UL);
     if (!IGadTools)
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return FALSE;
     }
 
 	if ( ! (ApplicationBase = (struct Library *) IExec->OpenLibrary("application.library", 51L)) )
 	{
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
 		return FALSE;
 	}
 	else
@@ -161,7 +157,7 @@ static BOOL p96pip_OpenOSLibs(void)
 	IApplication = (struct ApplicationIFace *) IExec->GetInterface(ApplicationBase,"application",1,NULL);
 	if (!IApplication)
 	{
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
 		return FALSE;
 	}
 
@@ -169,7 +165,7 @@ static BOOL p96pip_OpenOSLibs(void)
 }
 
 /**********************/
-static void p96pip_CloseOSLibs(void)
+static void p96_CloseOSLibs(void)
 {
     if (IP96)
     {
@@ -219,7 +215,7 @@ static void p96pip_CloseOSLibs(void)
 }
 
 /***************************************************/
-static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,  uint32_t *window_left, uint32_t *window_top )
+static BOOL p96_CheckEvents(struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,  uint32_t *window_left, uint32_t *window_top )
 {
     ULONG retval = FALSE;
     //static BOOL mouseonborder;
@@ -229,6 +225,8 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 
 	secs=0, mics=0, secs2=0, mics2=0;
 	p_mics1=0, p_mics2=0, p_secs1=0, p_secs2=0;
+
+	MPLAppIcon = NULL;
 
 	if (vo_fs && !mouse_hidden)
 	{
@@ -259,8 +257,8 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 	    if(IExec->SetSignal(0L,_timerSig ) & _timerSig)
 		{
 			if (reset_time>0)
-				IIntuition->RefreshSetGadgetAttrs((struct p96pip_Gadget*) OBJ[GID_Time], My_Window, NULL, SCROLLER_Top, current_time, TAG_DONE);
-			p96pip_TimerReset(RESET_TIME);
+				IIntuition->RefreshSetGadgetAttrs((struct Gadget*) OBJ[GID_Time], My_Window, NULL, SCROLLER_Top, current_time, TAG_DONE);
+			p96_TimerReset(RESET_TIME);
 		}
 	}
 
@@ -305,15 +303,15 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
                                         case 0:  /* Load File */
 											if (choosing == 0)
 											{
-	                                        	file = p96pip_LoadFile(NULL);
+	                                        	file = p96_LoadFile(NULL);
 
     	                                    	if (file)
     	                                    	{
     	                                    		#ifdef CONFIG_GUI
 													guiGetEvent(guiCEvent, (void *)guiSetPlay);
 													#endif
-													p96pip_NotifyServer(file);
-													p96pip_PlayFile((char*)file);
+													p96_NotifyServer(file);
+													p96_PlayFile((char*)file);
     	                                    	}
     	                                    }
                                         break;
@@ -323,7 +321,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 											if (choosing == 0)
 											{
 												DvdMessage = (struct Process *) IDOS->CreateNewProcTags (
-		   													NP_Entry, 		(ULONG) p96pip_OpenDVD,
+		   													NP_Entry, 		(ULONG) p96_OpenDVD,
 						   									NP_Name,	   	"Load DVD",
 															NP_StackSize,   262144,
 															NP_Child,		TRUE,
@@ -331,7 +329,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 								   							NP_ExitData, 	IDOS,
 						  									TAG_DONE);
 												if (!DvdMessage)
-													p96pip_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
+													p96_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
 											}
 										}
 										break;
@@ -341,7 +339,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 											if (choosing == 0)
 											{
 												VcdMessage = (struct Process *) IDOS->CreateNewProcTags (
-		   													NP_Entry, 		(ULONG) p96pip_OpenVCD,
+		   													NP_Entry, 		(ULONG) p96_OpenVCD,
 						   									NP_Name,	   	"Load VCD",
 															NP_StackSize,   262144,
 															NP_Child,		TRUE,
@@ -349,7 +347,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 								   							NP_ExitData, 	IDOS,
 						  									TAG_DONE);
 												if (!VcdMessage)
-													p96pip_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
+													p96_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
 											}
 										}
 										break;
@@ -359,7 +357,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 											if (choosing == 0)
 											{
 												NetworkMessage = (struct Process *) IDOS->CreateNewProcTags (
-		   													NP_Entry, 		(ULONG) p96pip_OpenNetwork,
+		   													NP_Entry, 		(ULONG) p96_OpenNetwork,
 						   									NP_Name,	   	"Load Network",
 															NP_StackSize,   262144,
 															NP_Child,		TRUE,
@@ -367,12 +365,12 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 								   							NP_ExitData, 	IDOS,
 						  									TAG_DONE);
 												if (!NetworkMessage)
-													p96pip_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
+													p96_PrintMsg(errmsg,REQTYPE_INFO,REQIMAGE_ERROR);
 											}
 										}
 										break;
 										case 5:
-											p96pip_ShowAbout();
+											p96_ShowAbout();
 										break;
                                         case 6:  /* Quit */
                                             put_command0(MP_CMD_QUIT);
@@ -389,14 +387,14 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 											else
 												isPaused = TRUE;
 
-											p96pip_ChangePauseButton();
+											p96_ChangePauseButton();
                                             put_command0(MP_CMD_PAUSE);
                                         break;
 
                                         case 1:  /* Quit */
                                             put_command0(MP_CMD_PAUSE);
 											isPaused = TRUE;
-											p96pip_ChangePauseButton();
+											p96_ChangePauseButton();
 											isPaused = FALSE;
                                             //put_command0(MP_CMD_STOP);
                                         break;
@@ -433,62 +431,62 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 	                                        put_command0(MP_CMD_SCREENSHOT);
                                         break;
                                         case 5:
-	                                        p96pip_ChangeWindowSize(x1);
+	                                        p96_ChangeWindowSize(x1);
                                         break;
                                         case 6:
-	                                        p96pip_ChangeWindowSize(x2);
+	                                        p96_ChangeWindowSize(x2);
                                         break;
                                         case 7:
-	                                        p96pip_ChangeWindowSize(xF);
+	                                        p96_ChangeWindowSize(xF);
                                         break;
                                         case 8:
-	                                        p96pip_ChangeWindowSize(xH);
+	                                        p96_ChangeWindowSize(xH);
                                         break;
                                         case 10:
 	                                        switch (SUBNUM(menucode))
     	                                    {
     	                                    	case 0:
 		    	                                    AspectRatio = AR_ORIGINAL;
-	                        	    	            p96pip_ChangeWindowSize(AR_ORIGINAL);
+	                        	    	            p96_ChangeWindowSize(AR_ORIGINAL);
                                 	    	    break;
                                 	    	    case 2:
 		    	                                    AspectRatio = AR_16_10;
-	                        	    	            p96pip_ChangeWindowSize(AR_16_10);
+	                        	    	            p96_ChangeWindowSize(AR_16_10);
     	    	                                case 3:
 		    	                                    AspectRatio = AR_16_9;
-	    	    	                                p96pip_ChangeWindowSize(AR_16_9);
+	    	    	                                p96_ChangeWindowSize(AR_16_9);
             	    	                        break;
                                     	    	case 4:
 		    	                                    AspectRatio = AR_185_1;
-		                                    	    p96pip_ChangeWindowSize(AR_185_1);
+		                                    	    p96_ChangeWindowSize(AR_185_1);
 		                                        break;
     	    	                                case 5:
 		    	                                    AspectRatio = AR_221_1;
-	    	    	                                p96pip_ChangeWindowSize(AR_221_1);
+	    	    	                                p96_ChangeWindowSize(AR_221_1);
             	    	                        break;
     	    	                                case 6:
 		    	                                    AspectRatio = AR_235_1;
-	    	    	                                p96pip_ChangeWindowSize(AR_235_1);
+	    	    	                                p96_ChangeWindowSize(AR_235_1);
             	    	                        break;
     	    	                                case 7:
 		    	                                    AspectRatio = AR_239_1;
-	    	    	                                p96pip_ChangeWindowSize(AR_239_1);
+	    	    	                                p96_ChangeWindowSize(AR_239_1);
             	    	                        break;
     	    	                                case 8:
 		    	                                    AspectRatio = AR_5_3;
-	    	    	                                p96pip_ChangeWindowSize(AR_5_3);
+	    	    	                                p96_ChangeWindowSize(AR_5_3);
             	    	                        break;
     	    	                                case 9:
 		    	                                    AspectRatio = AR_4_3;
-	    	    	                                p96pip_ChangeWindowSize(AR_4_3);
+	    	    	                                p96_ChangeWindowSize(AR_4_3);
             	    	                        break;
     	    	                                case 10:
 		    	                                    AspectRatio = AR_5_4;
-	    	    	                                p96pip_ChangeWindowSize(AR_5_4);
+	    	    	                                p96_ChangeWindowSize(AR_5_4);
             	    	                        break;
     	    	                                case 11:
 		    	                                    AspectRatio = AR_1_1;
-	    	    	                                p96pip_ChangeWindowSize(AR_1_1);
+	    	    	                                p96_ChangeWindowSize(AR_1_1);
             	    	                        break;
                 	    	                }
                 	    	            break;
@@ -502,10 +500,10 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 						                    mp_input_queue_cmd(mp_input_parse_cmd("mute"));
         								break;
         								case 1:
-		                                    p96pip_SetVolume(VOL_UP);
+		                                    p96_SetVolume(VOL_UP);
 		                                break;
 		                                case 2:
-		                                    p96pip_SetVolume(VOL_DOWN);
+		                                    p96_SetVolume(VOL_DOWN);
 										break;
 									}
                                 break;
@@ -597,7 +595,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 							else
 								isPaused = TRUE;
 
-							p96pip_ChangePauseButton();
+							p96_ChangePauseButton();
 							put_command0(MP_CMD_PAUSE);
 						break;
                         default:
@@ -641,7 +639,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 					IIntuition->GetWindowAttr(My_Window, WA_Left,  &old_d_posx,  sizeof(old_d_posx));
 					IIntuition->GetWindowAttr(My_Window, WA_Top, &old_d_posy, sizeof(old_d_posy));
 
-					//IIntuition->RefreshGList((struct p96pip_Gadget*)WinLayout, My_Window, NULL, -1);
+					//IIntuition->RefreshGList((struct Gadget*)WinLayout, My_Window, NULL, -1);
 				}
 	            break;
 				case IDCMP_IDCMPUPDATE:
@@ -666,13 +664,13 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 								else
 									isPaused = TRUE;
 
-								p96pip_ChangePauseButton();
+								p96_ChangePauseButton();
 								if (!Stopped)
 									put_command0(MP_CMD_PAUSE);
 								else
 								{
 									if (current_filename)
-										p96pip_PlayFile(current_filename);
+										p96_PlayFile(current_filename);
 								}
 							}
 							break;
@@ -704,22 +702,22 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 								}
 
 								isPaused = TRUE;
-								p96pip_ChangePauseButton();
+								p96_ChangePauseButton();
 								isPaused = FALSE;
 							}
 							break;
 							case GID_Eject:
 								if (choosing == 0)
 								{
-                                    file = p96pip_LoadFile(NULL);
+                                    file = p96_LoadFile(NULL);
 
     	                            if (file)
     	                            {
     	                            	#ifdef CONFIG_GUI
 										guiGetEvent(guiCEvent, (void *)guiSetPlay);
 										#endif
-										p96pip_NotifyServer(file);
-										p96pip_PlayFile((char*)file);
+										p96_NotifyServer(file);
+										p96_PlayFile((char*)file);
     	                            }
     	                        }
 							break;
@@ -782,7 +780,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 						case GID_Time:
 						{
 			            	reset_time = 0;
-		    	        	p96pip_TimerReset(RESET_TIME);
+		    	        	p96_TimerReset(RESET_TIME);
 		    	        }
 		    	        break;
 					}
@@ -796,7 +794,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
 						case GID_Time:
 						{
 							reset_time = RESET_TIME;
-			            	p96pip_TimerReset(RESET_TIME);
+			            	p96_TimerReset(RESET_TIME);
 			            }
 					}
 				}
@@ -805,7 +803,7 @@ static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height
         }
     }
 
-    p96pip_appw_events();
+    p96_appw_events();
 
     return retval;
 }
@@ -819,7 +817,7 @@ static BOOL ismouseon(struct Window *window)
     return FALSE;
 }
 */
-static char *p96pip_GetWindowTitle(void)
+static char *p96_GetWindowTitle(void)
 {
     if (filename)
     {
@@ -844,86 +842,22 @@ static char *p96pip_GetWindowTitle(void)
  **/
 static void draw_alpha_yv12(int x0, int y0, int w, int h, unsigned char* src, unsigned char *srca, int stride)
 {
-	register int x;
-	register UWORD *dstbase;
-	register UWORD *dst;
-	struct BitMap *bm;
-    struct RenderInfo ri;
-    int lock_h;
-    int numbuffers=0;
-
-	if (!w || !h)
-		return;
-
-    IP96->p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm   ,
-    								P96PIP_NumberOfBuffers, &numbuffers  ,
-    								TAG_END, TAG_DONE );
-
-    if (! (lock_h = IP96->p96LockBitMap(bm, (uint8 *)&ri, sizeof(struct RenderInfo))))
-    {
-        // Unable to lock the BitMap -> do nothing
-        return;
-    }
-
-    dstbase = (UWORD *)(ri.Memory + ( ( (y0 * image_width) + x0) * 2));
-
-    do
-    {
-        x = 0;
-        do
-        {
-            dst = dstbase;
-            if (srca[x])
-            {
-                __asm__ __volatile__(
-                    "li %%r4,0x0080;"
-                    "rlwimi %%r4,%1,8,16,23;"
-                    "sth %%r4,0(%0);"
-                    :
-                    : "b" ( dst + x), "r" (src[x])
-                    : "r4"
-                );
-            }
-        } while (++x < w);
-
-        src     +=   stride;
-        srca    +=   stride;
-        dstbase +=   image_width;
-
-    } while (--h);
-
-	if (numbuffers>1)
-	{
-		uint32 WorkBuf, DispBuf, NextWorkBuf;
-
-		IP96->p96PIP_GetTags(My_Window,	P96PIP_WorkBuffer,      &WorkBuf,
-								 		P96PIP_DisplayedBuffer, &DispBuf,
-								 		TAG_END, TAG_DONE );
-
-		NextWorkBuf = (WorkBuf+1) % numbuffers;
-
-		if (NextWorkBuf == DispBuf) IGraphics->WaitTOF();
-
-		IP96->p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf, //P96PIP_WorkBuffer, WorkBuf,
-								 		P96PIP_WorkBuffer,    NextWorkBuf, //P96PIP_DisplayedBuffer, NextWorkBuf,
-								 		TAG_END, TAG_DONE);
-	}
-
-    IP96->p96UnlockBitMap(bm, lock_h);
+ 	// to be implemented - find non-PIP equivalent of p96PIP_GetTags()
+	return;
 }
 
 /******************************** PREINIT ******************************************/
 static int preinit(const char *arg)
 {
-    mp_msg(MSGT_VO, MSGL_INFO, "VO: [p96_pip]\n");
-    if( !p96pip_OpenOSLibs() )
+    mp_msg(MSGT_VO, MSGL_INFO, "VO: [p96]\n");
+    if( !p96_OpenOSLibs() )
     {
         return -1;
     }
 
-    if (!p96pip_GiveArg(arg))
+    if (!p96_GiveArg(arg))
     {
-        p96pip_CloseOSLibs();
+        p96_CloseOSLibs();
         return -1;
     }
 
@@ -948,7 +882,7 @@ static ULONG GoFullScreen(void)
 
     if (My_Window)
     {
-		IP96->p96PIP_Close(My_Window);
+		IIntuition->CloseWindow(My_Window);
 		if (IconifyGadget)
 		{
 			IIntuition->DisposeObject(IconifyGadget);
@@ -962,7 +896,7 @@ static ULONG GoFullScreen(void)
 		My_Window = NULL;
 	}
 
-	My_Screen = IIntuition->OpenScreenTags ( 		NULL,
+	My_Screen = IIntuition->OpenScreenTags (
 								SA_LikeWorkbench,	TRUE,
 								SA_Type,			PUBLICSCREEN,
 								SA_PubName, 		"MPlayer Screen",
@@ -990,12 +924,7 @@ static ULONG GoFullScreen(void)
     left=(My_Screen->Width-out_width)/2;
     top=(My_Screen->Height-out_height)/2;
 
-    My_Window = IP96->p96PIP_OpenTags(
-                      	P96PIP_SourceFormat, RGBFB_YUV422CGX,
-                      	P96PIP_SourceWidth,  image_width,
-                      	P96PIP_SourceHeight, image_height,
-						P96PIP_NumberOfBuffers, NUMBUFFERS,
-
+    My_Window = IIntuition->OpenWindowTags(
                       	WA_CustomScreen,    (ULONG) My_Screen,
                       	WA_ScreenTitle,     (ULONG) "MPlayer ",
                       	WA_Left,            left,
@@ -1047,7 +976,7 @@ static ULONG GoFullScreen(void)
     return ModeID;
 }
 /**********************/
-static ULONG Open_PIPWindow(void)
+static ULONG Open_Window(void)
 {
     // Window
     ULONG ModeID = INVALID_ID;
@@ -1165,7 +1094,7 @@ static ULONG Open_PIPWindow(void)
 
 						DIcon = HasName ? IIcon->GetDiskObject(ProgramName) : NULL;
 
-                        switch(p96pip_BorderMode)
+                        switch(p96_BorderMode)
                         {
                             case NOBORDER:
 								bw = 0;
@@ -1189,16 +1118,12 @@ static ULONG Open_PIPWindow(void)
                             FirstTime = FALSE;
                         }
 
-                        switch(p96pip_BorderMode)
+                        switch(p96_BorderMode)
                         {
                             case NOBORDER:
-                                My_Window = IP96->p96PIP_OpenTags(
-                                    P96PIP_SourceFormat, 	RGBFB_YUV422CGX,
-                                    P96PIP_SourceWidth,  	image_width,
-                                    P96PIP_SourceHeight, 	image_height,
-                                    P96PIP_AllowCropping, 	TRUE,
-									P96PIP_NumberOfBuffers, NUMBUFFERS,
-
+								My_Window = IIntuition->OpenWindowTags(NULL,
+									WA_Width, image_width,
+  									WA_Height, image_height,
                                     WA_CustomScreen,    (ULONG) My_Screen,
                                     WA_ScreenTitle,     (ULONG) "MPlayer ",
                                     WA_Left,            old_d_posx,
@@ -1224,13 +1149,9 @@ static ULONG Open_PIPWindow(void)
                             break;
 
                             case TINYBORDER:
-                                My_Window = IP96->p96PIP_OpenTags(
-                                    P96PIP_SourceFormat, 	RGBFB_YUV422CGX,
-                                    P96PIP_SourceWidth,  	image_width,
-                                    P96PIP_SourceHeight, 	image_height,
-                                    P96PIP_AllowCropping, 	TRUE,
-									P96PIP_NumberOfBuffers, NUMBUFFERS,
-
+								My_Window = IIntuition->OpenWindowTags(NULL,
+									WA_Width, image_width,
+  									WA_Height, image_height,
                                     WA_CustomScreen,    (ULONG) My_Screen,
                                     WA_ScreenTitle,     (ULONG) "MPlayer ",
                                     WA_Left,            old_d_posx,
@@ -1256,24 +1177,12 @@ static ULONG Open_PIPWindow(void)
                             break;
 
                             default:
-								My_Window = IP96->p96PIP_OpenTags(
-									P96PIP_SourceFormat, 	RGBFB_YUV422CGX,
-									P96PIP_SourceWidth,		image_width,
-									P96PIP_SourceHeight,	image_height,
-									P96PIP_AllowCropping,	TRUE,
-									P96PIP_NumberOfBuffers, NUMBUFFERS,
-									P96PIP_Relativity, PIPRel_Width | PIPRel_Height,
-//									P96PIP_Left, 1,
-//									P96PIP_Top, 1,
-#ifdef CONFIG_GUI
-									P96PIP_Width, (ULONG) -1,
-									P96PIP_Height, (ULONG)-34,
-#endif
-									P96PIP_ColorKeyPen, 	0,
-
+								My_Window = IIntuition->OpenWindowTags(NULL,
+									WA_Width, image_width,
+  									WA_Height, image_height,
 									WA_CustomScreen,	(ULONG) My_Screen,
 									WA_ScreenTitle,		(ULONG) "MPlayer",
-									WA_Title,			p96pip_GetWindowTitle(),
+									WA_Title,			p96_GetWindowTitle(),
 									WA_Left,			old_d_posx,
 									WA_Top,				old_d_posy,
 									WA_InnerWidth,		window_width,
@@ -1321,7 +1230,7 @@ static ULONG Open_PIPWindow(void)
 
                     	if (hasGUI == TRUE)
                     	{
-							WinLayout = (Object*) p96pip_CreateWinLayout(My_Screen, My_Window);
+							WinLayout = (Object*) CreateWinLayout(My_Screen, My_Window);
 
 							if (WinLayout)
 							{
@@ -1330,10 +1239,10 @@ static ULONG Open_PIPWindow(void)
 									ULONG total_time = rxid_get_time_length();
 									OBJ[GID_MAIN] = (Object *)ToolBarObject;
 
-									IIntuition->AddGadget(My_Window, (struct p96pip_Gadget*)WinLayout, (uint16)~0);
-									IIntuition->RefreshSetGadgetAttrs((struct p96pip_Gadget*) OBJ[GID_Time], My_Window, NULL, SCROLLER_Total, total_time, TAG_DONE);
+									IIntuition->AddGadget(My_Window, (struct Gadget*)WinLayout, (uint16)~0);
+									IIntuition->RefreshSetGadgetAttrs((struct Gadget*) OBJ[GID_Time], My_Window, NULL, SCROLLER_Total, total_time, TAG_DONE);
 
-									IIntuition->RefreshGList((struct p96pip_Gadget*)WinLayout, My_Window, NULL, -1);
+									IIntuition->RefreshGList((struct Gadget*)WinLayout, My_Window, NULL, -1);
 
 									IIntuition->GetAttr(SPACE_AreaBox,OBJ[GID_MAIN],(ULONG *)&bbox);
 									//IP96->p96RectFill(My_Window->RPort,bbox->Left,bbox->Top,bbox->Width-1,bbox->Height-1,0xffffffff);
@@ -1462,7 +1371,7 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		ModeID = Open_FullScreen();
 	}
 	else
-		ModeID = Open_PIPWindow();
+		ModeID = Open_Window();
 
     if (INVALID_ID == ModeID)
     {
@@ -1482,8 +1391,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 
 	if (hasGUI == TRUE)
 	{
-		p96pip_TimerInit();
-		p96pip_TimerReset(RESET_TIME);
+		p96_TimerInit();
+		p96_TimerReset(RESET_TIME);
 	}
 	Stopped = FALSE;
     return 0; // -> Ok
@@ -1658,165 +1567,10 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 /******************************** DRAW_SLICE ******************************************/
 static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 {
-    struct RenderInfo ri;
-    struct BitMap *bm = NULL;
-    int lock_h;
-    unsigned int w3, _w2;
-    int numbuffers=0;
+ 	// to be implemented - find non-PIP equivalent of p96PIP_GetTags()
 
-/*
-    w -= (w%8);
-*/
-    IP96->p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm   ,
-    								P96PIP_NumberOfBuffers, &numbuffers  ,
-    								TAG_END, TAG_DONE );
+    return -1;
 
-    if (! (lock_h = IP96->p96LockBitMap(bm, (uint8 *)&ri, sizeof(struct RenderInfo))))
-    {
-        // Unable to lock the BitMap -> do nothing
-        return -1;
-    }
-
-    w3 = w & -8;
-    _w2 = w3 / 8; // Because we write 8 pixels (aka 16 bit word) at each loop
-    h &= -2;
-
-    if (h > 0 && _w2)
-    {
-        ULONG *srcdata, *srcdata2;
-
-        ULONG *py, *py2, *pu, *pv;
-        ULONG *_py, *_py2, *_pu, *_pv;
-
-        _py = py = (ULONG *) image[0];
-        _pu = pu = (ULONG *) image[1];
-        _pv = pv = (ULONG *) image[2];
-
-        srcdata = (ULONG *) ((uint32)ri.Memory + ( ( (y * image_width) + x) * 2));
-
-        // The data must be stored like this:
-        // YYYYYYYY UUUUUUUU : pixel 0
-        // YYYYYYYY VVVVVVVV : pixel 1
-
-        // We will read one word of Y (4 byte)
-        // then read one word of U and V
-        // After another Y word because we need 2 Y for 1 (U & V)
-
-        _py--;
-        _pu--;
-        _pv--;
-
-        stride[0] &= -8;
-        stride[1] &= -8;
-        stride[2] &= -8;
-
-#if USE_VMEM64
-        /* If aligned buffer, use 64bit writes. It might be worth
-           the effort to manually align in other cases, but that'd
-           need to handle all conditions such like:
-           a) UWORD, UQUAD ... [end aligment]
-           b) ULONG, UQUAD ... [end aligment]
-           c) ULONG, UWORD, UQUAD ... [end aligment]
-           - Piru
-        */
-        if (!(((uint32) srcdata) & 7))
-        {
-            ULONG _tmp[3];
-            // this alignment crap is needed in case we don't have aligned stack
-            register ULONG *tmp = (APTR)((((ULONG) _tmp) + 4) & -8);
-
-            srcdata -= 2;
-
-            do
-            {
-                int w2 = _w2;
-                h -= 2;
-
-                _py2 = (ULONG *)(((ULONG)_py) + (stride[0] ) );
-
-                py = _py;
-                py2 = _py2;
-                pu = _pu;
-                pv = _pv;
-
-                srcdata2 = (ULONG *) ( (ULONG) srcdata + w3 * 2 );
-
-                do
-                {
-                    // Y is like that : Y1 Y2 Y3 Y4
-                    // U is like that : U1 U2 U3 U4
-                    // V is like that : V1 V2 V3 V4
-
-                    PLANAR_2_CHUNKY_64(py, py2, pu, pv, srcdata, srcdata2, tmp);
-
-                } while (--w2);
-
-                srcdata = (ULONG *) ( (ULONG) srcdata + (w3 << 1) );
-                _py = (ULONG *)(((ULONG)_py) + (stride[0] << 1) );
-                _pu = (ULONG *)(((ULONG)_pu) + stride[1]);
-                _pv = (ULONG *)(((ULONG)_pv) + stride[2]);
-
-            } while (h);
-        }
-        else
-#endif
-        {
-            srcdata--;
-
-            do
-            {
-                int w2 = _w2;
-
-                h -= 2;
-
-                _py2 = (ULONG *)(((ULONG)_py) + (stride[0] ) );
-
-                py = _py;
-                py2 = _py2;
-                pu = _pu;
-                pv = _pv;
-
-                srcdata2 = (ULONG *) ( (ULONG) srcdata + w3 * 2 );
-
-                do
-                {
-                    // Y is like that : Y1 Y2 Y3 Y4
-                    // U is like that : U1 U2 U3 U4
-                    // V is like that : V1 V2 V3 V4
-
-                    PLANAR_2_CHUNKY(py, py2, pu, pv, srcdata, srcdata2);
-
-                } while (--w2);
-
-                srcdata = (ULONG *) ( (ULONG) srcdata + (w3 << 1) );
-                _py = (ULONG *)(((ULONG)_py) + (stride[0] << 1) );
-                _pu = (ULONG *)(((ULONG)_pu) + stride[1]);
-                _pv = (ULONG *)(((ULONG)_pv) + stride[2]);
-
-            } while (h);
-        }
-    }
-
-	if (numbuffers>1)
-	{
-		uint32 WorkBuf, DispBuf, NextWorkBuf;
-
-		IP96->p96PIP_GetTags(My_Window,	P96PIP_WorkBuffer, &WorkBuf,
-								 		P96PIP_DisplayedBuffer, &DispBuf,
-								 		TAG_END, TAG_DONE );
-
-		NextWorkBuf = (WorkBuf+1) % numbuffers;
-
-		if (NextWorkBuf == DispBuf) IGraphics->WaitTOF();
-
-		IP96->p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf,
-								 		P96PIP_WorkBuffer,    NextWorkBuf,
-								 		TAG_END, TAG_DONE );
-	}
-
-    IP96->p96UnlockBitMap(bm, lock_h);
-
-    return 0;
 }
 /******************************** DRAW_OSD ******************************************/
 
@@ -1846,7 +1600,7 @@ static void FreeGfx(void)
 {
 	int i = 0;
 
-	p96pip_TimerExit();
+	p96_TimerExit();
 
 	if (window_title)
 	{
@@ -1886,7 +1640,7 @@ static void FreeGfx(void)
 			}
 		}
 
-   	    IP96->p96PIP_Close(My_Window);
+   	    IIntuition->CloseWindow(My_Window);
 		if (IconifyGadget) 
 		{
 			IIntuition->DisposeObject(IconifyGadget);
@@ -1914,7 +1668,7 @@ static void uninit(void)
 	{
 	    FreeGfx();
 
-	    p96pip_CloseOSLibs();
+	    p96_CloseOSLibs();
 	}
 	else
 	{
@@ -1924,7 +1678,7 @@ static void uninit(void)
 	    old_d_height = 0;
 
 		isPaused = TRUE;
-		p96pip_ChangePauseButton();
+		p96_ChangePauseButton();
         put_command0(MP_CMD_PAUSE);
 		isPaused = FALSE;
 		Stopped = TRUE;
@@ -1991,7 +1745,7 @@ static int control(uint32_t request, void *data, ...)
 /******************************** CHECK_EVENTS    ******************************************/
 static void check_events(void)
 {
-    p96pip_CheckEvents(My_Window, &window_height, &window_width, &win_left, &win_top);
+    p96_CheckEvents(My_Window, &window_height, &window_width, &win_left, &win_top);
 /* ARexx */
     if(IExec->SetSignal(0L,rxHandler->sigmask) & rxHandler->sigmask)
     {
@@ -2027,7 +1781,7 @@ static int query_format(uint32_t format)
     }
 }
 
-void p96pip_ChangePauseButton(void)
+void p96_ChangePauseButton(void)
 {
 	Object *temp = NULL;
 	struct Screen *tempScreen = IIntuition->LockPubScreen("Workbench");
@@ -2056,7 +1810,7 @@ void p96pip_ChangePauseButton(void)
 	ILayout->RethinkLayout((struct Gadget *)OBJ[GID_MAIN], My_Window, NULL, TRUE);
 }
 
-struct Gadget *p96pip_CreateWinLayout(struct Screen *screen, struct Window *window)
+struct Gadget *CreateWinLayout(struct Screen *screen, struct Window *window)
 {
 	Object *TempLayout;
 	TempLayout = VLayoutObject,
@@ -2222,7 +1976,7 @@ static void ClearSpaceArea(struct Window *window)
 }
 #endif
 
-static int32 p96pip_PlayFile(const char *FileName)
+static int32 p96_PlayFile(const char *FileName)
 {
 	mp_cmd_t MPCmd;
 	mp_cmd_t *c;
@@ -2256,7 +2010,7 @@ static int32 p96pip_PlayFile(const char *FileName)
 		{
 			mp_cmd_free(c);
 		}
-	p96pip_ChangePauseButton();
+	p96_ChangePauseButton();
 
 	/* Add the file to the queue */
 	MPCmd.id			= MP_CMD_LOADFILE;
@@ -2289,12 +2043,12 @@ static int32 p96pip_PlayFile(const char *FileName)
 		}
 
 	isPaused = FALSE;
-	p96pip_ChangePauseButton();
+	p96_ChangePauseButton();
 
 	return RETURN_OK;
 }
 
-static void p96pip_NotifyServer(STRPTR FileName)
+static void p96_NotifyServer(STRPTR FileName)
 {
 	/* Send a message to Notification System (AKA Ringhio.. ;) */
 	if (hasNotificationSystem == TRUE)
@@ -2326,7 +2080,7 @@ static void p96pip_NotifyServer(STRPTR FileName)
 	}
 }
 
-void p96pip_RemoveAppPort(void)
+void p96_RemoveAppPort(void)
 {
     if (AppPort)
     {
@@ -2338,7 +2092,7 @@ void p96pip_RemoveAppPort(void)
     }
 }
 
-static void p96pip_appw_events (void)
+static void p96_appw_events (void)
 {
     if (AppWin)
     {
@@ -2357,17 +2111,17 @@ static void p96pip_appw_events (void)
 				if ((strcmp(arg[0].wa_Name,"")!=0))
 				{
 				    IDOS->AddPart(cmd,arg[0].wa_Name,512);
-					p96pip_NotifyServer(cmd);
-					p96pip_PlayFile(cmd);
+					p96_NotifyServer(cmd);
+					p96_PlayFile(cmd);
 				}
 				else
 				{
 					char *file;
-					file = p96pip_LoadFile(cmd);
+					file = p96_LoadFile(cmd);
 					if (file)
 					{
-						p96pip_NotifyServer(file);
-						p96pip_PlayFile(file);
+						p96_NotifyServer(file);
+						p96_PlayFile(file);
 					}
 				}
 		    	IExec->ReplyMsg ((void*) msg);
@@ -2377,7 +2131,7 @@ static void p96pip_appw_events (void)
 }
 
 /* STUFF FUNCTIONS FOR MENU */
-static void p96pip_CalcAspectRatio(float a_ratio, int _oldwidth, int _oldheight, int *_newwidth, int *_newheight)
+static void p96_CalcAspectRatio(float a_ratio, int _oldwidth, int _oldheight, int *_newwidth, int *_newheight)
 {
 	int tempLen = 0;
 
@@ -2386,7 +2140,7 @@ static void p96pip_CalcAspectRatio(float a_ratio, int _oldwidth, int _oldheight,
 	*_newwidth = _oldwidth;
 }
 
-static void p96pip_ChangeWindowSize(int mode)
+static void p96_ChangeWindowSize(int mode)
 {
 	int new_width = 0, new_height = 0;
 	int new_left  = 0, new_top    = 0;
@@ -2418,31 +2172,31 @@ static void p96pip_ChangeWindowSize(int mode)
 				new_height = keep_height / 2;
 			break;
 			case AR_4_3:
-				p96pip_CalcAspectRatio(1.333333f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.333333f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_5_3:
-				p96pip_CalcAspectRatio(1.666667f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.666667f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_5_4:
-				p96pip_CalcAspectRatio(1.25f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.25f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_16_10:
-				p96pip_CalcAspectRatio(1.6f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.6f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_16_9:
-				p96pip_CalcAspectRatio(1.777777f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.777777f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_235_1:
-				p96pip_CalcAspectRatio(2.35f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(2.35f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_239_1:
-				p96pip_CalcAspectRatio(2.39f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(2.39f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_221_1:
-				p96pip_CalcAspectRatio(2.21f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(2.21f, keep_width, keep_height, &new_width, &new_height);
 			break;
 			case AR_185_1:
-				p96pip_CalcAspectRatio(1.85f, keep_width, keep_height, &new_width, &new_height);
+				p96_CalcAspectRatio(1.85f, keep_width, keep_height, &new_width, &new_height);
 			break;
 		}
 		if (mode!=xF)
@@ -2477,7 +2231,7 @@ static void p96pip_ChangeWindowSize(int mode)
 
 }
 
-static void p96pip_SetVolume(int direction)
+static void p96_SetVolume(int direction)
 {
 	switch (direction)
 	{
@@ -2490,7 +2244,7 @@ static void p96pip_SetVolume(int direction)
 	}
 }
 
-static UBYTE *p96pip_LoadFile(const char *StartingDir)
+static UBYTE *p96_LoadFile(const char *StartingDir)
 {
 	struct FileRequester * AmigaOS_FileRequester = NULL;
 	BPTR FavoritePath_File;
@@ -2561,7 +2315,7 @@ static UBYTE *p96pip_LoadFile(const char *StartingDir)
 	return filename;
 }
 
-static int32 p96pip_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase)
+static int32 p96_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase)
 {
         struct ExecIFace *iexec = (APTR)execbase->MainInterface;
         struct Process *me = (APTR)iexec->FindTask(NULL);
@@ -2570,7 +2324,7 @@ static int32 p96pip_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct
 
         if(pmp)
         {
-                p96pip_PrintMsg(pmp->about, pmp->type, pmp->image);
+                p96_PrintMsg(pmp->about, pmp->type, pmp->image);
                 iexec->FreeVec(pmp);
                 return RETURN_OK;
         }
@@ -2579,7 +2333,7 @@ static int32 p96pip_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct
 
 }
 
-static void p96pip_PrintMsg(CONST_STRPTR text,int REQ_TYPE, int REQ_IMAGE)
+static void p96_PrintMsg(CONST_STRPTR text,int REQ_TYPE, int REQ_IMAGE)
 {
 	Object *reqobj;
 
@@ -2603,7 +2357,7 @@ static void p96pip_PrintMsg(CONST_STRPTR text,int REQ_TYPE, int REQ_IMAGE)
 	}
 }
 
-static void p96pip_ShowAbout(void)
+static void p96_ShowAbout(void)
 {
 	struct Process *TaskMessage;
 	struct pmpMessage *pmp = IExec->AllocVec(sizeof(struct pmpMessage), MEMF_SHARED);
@@ -2621,7 +2375,7 @@ static void p96pip_ShowAbout(void)
 	pmp->image = REQIMAGE_INFO;
 
 	TaskMessage = (struct Process *) IDOS->CreateNewProcTags (
-		   										NP_Entry, 		(ULONG) p96pip_PrintMsgProc,
+		   										NP_Entry, 		(ULONG) p96_PrintMsgProc,
 									   			NP_Name,	   	"About MPlayer",
 												NP_StackSize,   262144,
 												NP_Child,		TRUE,
@@ -2631,12 +2385,12 @@ static void p96pip_ShowAbout(void)
 									  			TAG_DONE);
 	if (!TaskMessage)
 	{
-		p96pip_PrintMsg(pmp->about,REQTYPE_INFO,REQIMAGE_INFO);
+		p96_PrintMsg(pmp->about,REQTYPE_INFO,REQIMAGE_INFO);
 		IExec->FreeVec(pmp);
 	}
 }
 
-static void p96pip_OpenNetwork(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
+static void p96_OpenNetwork(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
 {
 	Object *netwobj;
 	UBYTE buffer[513]="http://";
@@ -2661,14 +2415,14 @@ static void p96pip_OpenNetwork(STRPTR args UNUSED, int32 length UNUSED, struct E
        		#ifdef CONFIG_GUI
 			guiGetEvent(guiCEvent, (void *)guiSetPlay);
 			#endif
-			p96pip_PlayFile(buffer);
+			p96_PlayFile(buffer);
 		}
 		IIntuition->DisposeObject( netwobj );
 		choosing = 0;
 	}
 }
 
-static void p96pip_OpenDVD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
+static void p96_OpenDVD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
 {
 	Object *dvdobj;
 	UBYTE buffer[256]="dvd://1";
@@ -2693,18 +2447,18 @@ static void p96pip_OpenDVD(STRPTR args UNUSED, int32 length UNUSED, struct ExecB
        		#ifdef CONFIG_GUI
 			guiGetEvent(guiCEvent, (void *)guiSetPlay);
 			#endif
-			p96pip_PlayFile(buffer);
+			p96_PlayFile(buffer);
 			printf("buffer:%s\n",buffer);
 		}
 		else
 			if (strncmp(buffer,"dvd://",6)!=0)
-				p96pip_PrintMsg("Enter a valid DVD protocol", REQTYPE_INFO, REQIMAGE_ERROR);
+				p96_PrintMsg("Enter a valid DVD protocol", REQTYPE_INFO, REQIMAGE_ERROR);
 		IIntuition->DisposeObject( dvdobj );
 		choosing = 0;
 	}
 }
 
-static void p96pip_OpenVCD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
+static void p96_OpenVCD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED)
 {
 	Object *vcdobj;
 	UBYTE buffer[256]="vcd://1";
@@ -2729,17 +2483,17 @@ static void p96pip_OpenVCD(STRPTR args UNUSED, int32 length UNUSED, struct ExecB
        		#ifdef CONFIG_GUI
 			guiGetEvent(guiCEvent, (void *)guiSetPlay);
 			#endif
-			p96pip_PlayFile(buffer);
+			p96_PlayFile(buffer);
 		}
 		else
 			if (strncmp(buffer,"vcd://",6)!=0)
-				p96pip_PrintMsg("Enter a valid VCD protocol", REQTYPE_INFO, REQIMAGE_ERROR);
+				p96_PrintMsg("Enter a valid VCD protocol", REQTYPE_INFO, REQIMAGE_ERROR);
 		IIntuition->DisposeObject( vcdobj );
 		choosing = 0;
 	}
 }
 
-void p96pip_TimerReset(uint32 microDelay)
+void p96_TimerReset(uint32 microDelay)
 {
 	if (microDelay>0)
 	{
@@ -2750,7 +2504,7 @@ void p96pip_TimerReset(uint32 microDelay)
 	}
 }
 
-BOOL p96pip_TimerInit(void)
+BOOL p96_TimerInit(void)
 {
 	_port = (struct MsgPort *)IExec->AllocSysObject(ASOT_PORT, NULL);
 	if (!_port) return FALSE;
@@ -2775,7 +2529,7 @@ BOOL p96pip_TimerInit(void)
 	return FALSE;
 }
 
-void p96pip_TimerExit(void)
+void p96_TimerExit(void)
 {
 	if (_timerio)
 	{
