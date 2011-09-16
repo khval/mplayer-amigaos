@@ -1,5 +1,5 @@
-#ifndef __VO_P96PIP_H__
-#define __VO_P96PIP_H__
+#ifndef __VO_P96_H__
+#define __VO_P96_H__
 
 #ifndef WORDS_BIGENDIAN
 #define WORDS_BIGENDIAN 1
@@ -7,13 +7,13 @@
 
 static vo_info_t info =
 {
-    "Picasso96 video output (PIP)",
-    "p96_pip",
-    "Joerg Strohmayer and Andrea Palmate'",
+    "Picasso96 video output",
+    "p96",
+    "Varthall, Joerg Strohmayer and Andrea Palmate'",
     ""
 };
 
-LIBVO_EXTERN(p96_pip)
+LIBVO_EXTERN(p96)
 
 // To make gcc happy
 extern void mplayer_put_key(int code);
@@ -70,7 +70,7 @@ struct TimerIFace 	*ITimer;
 static uint32_t		reset_time = RESET_TIME;
 
 struct DiskObject	*DIcon;
-struct AppIcon 		*MPLAppIcon = NULL;
+struct AppIcon 		*MPLAppIcon ;
 
 static UWORD *EmptyPointer = NULL;
 
@@ -185,7 +185,7 @@ static struct ApplicationIFace  *IApplication;
 #define NOBORDER            0
 #define TINYBORDER          1
 #define ALWAYSBORDER        2
-static ULONG p96pip_BorderMode = ALWAYSBORDER;
+static ULONG p96_BorderMode = ALWAYSBORDER;
 //static ULONG old_p96_BorderMode = ALWAYSBORDER;
 
 /* This enum allow to change size of window at runtime */
@@ -246,34 +246,34 @@ static struct Gadget MyDragGadget =
 
 /* Function prototypes */
 
-static int32 p96pip_PlayFile(const char *FileName);
-static void p96pip_NotifyServer(STRPTR FileName);
-void p96pip_RemoveAppPort(void);
-static void p96pip_appw_events(void);
-static BOOL p96pip_GiveArg(const char *arg);
-static void p96pip_CloseOSLibs(void);
-static BOOL p96pip_OpenOSLibs(void);
-static void p96pip_ChangeWindowSize(int mode);
-static void p96pip_SetVolume(int direction);
-static UBYTE *p96pip_LoadFile(const char *StartingDir);
-static BOOL p96pip_CheckEvents(struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,  uint32_t *window_left, uint32_t *window_top );
-static char *p96pip_GetWindowTitle(void);
+static int32 p96_PlayFile(const char *FileName);
+static void p96_NotifyServer(STRPTR FileName);
+void p96_RemoveAppPort(void);
+static void p96_appw_events(void);
+static BOOL p96_GiveArg(const char *arg);
+static void p96_CloseOSLibs(void);
+static BOOL p96_OpenOSLibs(void);
+static void p96_ChangeWindowSize(int mode);
+static void p96_SetVolume(int direction);
+static UBYTE *p96_LoadFile(const char *StartingDir);
+static BOOL p96_CheckEvents(struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,  uint32_t *window_left, uint32_t *window_top );
+static char *p96_GetWindowTitle(void);
 static void draw_alpha_yv12(int x0,int y0, int w,int h, unsigned char* src, unsigned char *srca, int stride);
 static ULONG GoFullScreen(void);
-static ULONG Open_PIPWindow(void);
+static ULONG Open_Window(void);
 static ULONG Open_FullScreen(void);
 static void FreeGfx(void);
-static int32 p96pip_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase);
-static void p96pip_PrintMsg(CONST_STRPTR text,int REQ_TYPE, int REQ_IMAGE);
-static void p96pip_ShowAbout(void);
-static void p96pip_OpenNetwork(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
-static void p96pip_OpenDVD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
-static void p96pip_OpenVCD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
-void p96pip_ChangePauseButton(void);
-static struct Gadget *p96pip_CreateWinLayout(struct Screen *screen, struct Window *window);
-void p96pip_TimerReset(uint32 microDelay);
-BOOL p96pip_TimerInit(void);
-void p96pip_TimerExit(void);
+static int32 p96_PrintMsgProc(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase);
+static void p96_PrintMsg(CONST_STRPTR text,int REQ_TYPE, int REQ_IMAGE);
+static void p96_ShowAbout(void);
+static void p96_OpenNetwork(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
+static void p96_OpenDVD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
+static void p96_OpenVCD(STRPTR args UNUSED, int32 length UNUSED, struct ExecBase *execbase UNUSED);
+void p96_ChangePauseButton(void);
+static struct Gadget *CreateWinLayout(struct Screen *screen, struct Window *window);
+void p96_TimerReset(uint32 microDelay);
+BOOL p96_TimerInit(void);
+void p96_TimerExit(void);
 #if 0
 static void ClearSpaceArea(struct Window *window);
 #endif
