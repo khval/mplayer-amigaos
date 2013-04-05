@@ -1,0 +1,21 @@
+Most used SVN commands
+----------------------
+
+00) Get the whole sources from scratch:
+svn checkout https://mplayer-amigaos.googlecode.com/svn/trunk/ mplayer-amigaos
+
+01) Update your copy:
+svn update https://mplayer-amigaos.googlecode.com/svn/trunk/
+
+02) Commit your changes:
+svn commit -m "Text of changes."
+
+03) Commit Message Correction:
+svn propset -r 14 --revprop svn:log "First version of the benchmark suite added." https://mplayer-amigaos.googlecode.com/svn/trunk/
+
+04) Revert all your local changes to the revision on the server:
+svn revert --recursive .
+
+05) Add or delete a file/directory
+svn add (file)
+svn delete (file)
