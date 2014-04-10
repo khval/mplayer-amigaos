@@ -1,4 +1,3 @@
-
 #ifdef __AMIGAOS4__
 #include <proto/dos.h>
 
