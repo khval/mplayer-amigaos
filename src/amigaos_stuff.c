@@ -1,3 +1,20 @@
+
+#ifdef __AMIGAOS4__
+#include <proto/dos.h>
+
+#define debug_level 0
+
+#if debug_level > 0
+#define dprintf( ... ) IDOS->Printf( __VA_ARGS__ )
+#else
+#define dprintf(...) 
+#endif
+
+#else
+#define dprintf(...) 
+#endif
+
+
 #include <exec/types.h>
 #include <proto/timer.h>
 #include <proto/dos.h>
@@ -5,6 +22,7 @@
 #include <proto/asl.h>
 #include <proto/wb.h>
 #include <proto/icon.h>
+#include <devices/ahi.h>
 
 /* ARexx */
 #include "MPlayer-arexx.h"
@@ -19,6 +37,9 @@
 #include <proto/dos.h>
 #include <proto/wb.h>
 #include <proto/application.h>
+#include <proto/intuition.h>
+#include <proto/graphics.h>
+
 #include <libraries/application.h>
 
 #include <workbench/workbench.h>
@@ -39,6 +60,29 @@ const char STACK[] __attribute((used))   = "$STACK: 5000000";
 extern char *SCREENSHOTDIR;
 char *EXTPATTERN = "(#?.avi|#?.mpg|#?.mpeg|#?.asf|#?.wmv|#?.vob|#?.rm|#?.mov|#?.mp3|#?.ogg|#?.wav|#?.wmv|#?.wma|#?.flv|#?.asf|#?.mp4)";
 
+
+int SWAPLONG( int i )
+{
+	int o;
+	asm
+	(
+		"lwarx %0,0,%1 \n"	
+		:  "=r" (o) : "r" (&i), "r" (&i)  : "r0"
+	);
+	return o;
+}
+
+short SWAPWORD( short hi )
+{
+	short ho;
+	asm
+	(
+		"lhbrx %0,0,%1 \n"	
+		:  "=r" (ho) : "r" (&hi), "r" (&hi)  : "r0"
+	);
+	return ho;
+}
+
 struct Process *p = NULL; 	//this to remove
 APTR OldPtr =NULL;			//the requesters
 
@@ -47,12 +91,45 @@ struct Library 			 *AsyncIOBase = NULL;
 struct AsyncIOIFace 	 *IAsyncIO=NULL;
 #endif
 
+APTR window_mx;
+
+// macros needs this global.
+struct ARexxIFace		*IARexx = NULL;
+
+struct Device 			 *AHIBase = NULL;
+struct AHIIFace		*IAHI = NULL;
+
 struct Device 			 *TimerBase = NULL;
 //extern struct TimerIFace *ITimer;
+
 struct Library 			 *AslBase = NULL;
 struct AslIFace 		 *IAsl = NULL;
+
 struct Library 			 *ApplicationBase = NULL;
-struct ApplicationIFace  *IApplication = NULL;
+struct ApplicationIFace	*IApplication = NULL;
+
+struct Library			*GraphicsBase = NULL;
+struct GraphicsIFace	*IGraphics = NULL;
+
+struct Library			*WorkbenchBase = NULL;
+struct WorkbenchIFace	*IWorkbench = NULL;
+
+struct Library			*KeymapBase = NULL;
+struct KeymapIFace		*IKeymap = NULL;
+
+struct Library			*LayersBase = NULL;
+struct LayersIFace		*ILayers = NULL;
+
+struct Library			*Picasso96Base = NULL;
+struct IP96IFace		*IP96 = NULL;
+
+
+#ifdef HAVE_CGX
+struct Libraty *CyberGfxBase = NULL;
+struct CyberGfxIFace *ICyberGfx = NULL;
+#endif
+
+struct Library * IntuitionBase = NULL;
 
 UBYTE  TimerDevice = -1; // -1 -> not opened
 struct TimeRequest 		 *TimerRequest = NULL;
@@ -73,17 +150,56 @@ extern void RemoveAppPort(void);
 extern struct DiskObject *DIcon;
 extern struct AppIcon 	 *MPLAppIcon;
 
-#define GET_PATH(drawer,file,dest)                                                      \
-	dest = (char *) malloc( ( strlen(drawer) + strlen(file) + 2 ) * sizeof(char) );     \
-	if (dest)																																						\
-		{                                                                         					\
-				if ( strlen(drawer) == 0) strcpy(dest, file);																	\
-				else																																						\
-				{																																								\
-			if ( (drawer[ strlen(drawer) - 1  ] == ':')  ) sprintf(dest, "%s%s", drawer, file);  \
-			else sprintf(dest, "%s/%s", drawer, file);																		\
-				}																																								\
+/*
+static struct MsgPort *ahi_port = NULL;			// Port for AHI
+static struct AHIRequest *ahi_io = NULL;		// IORequest for AHI
+*/
+
+/*
+#ifdef CONFIG_AHI
+void open_ahi()
+{
+	// Open AHI
+
+	ahi_io	= NULL;
+	IAHI		= NULL;
+	AHIBase	= NULL;
+
+	ahi_port = CreateMsgPort();
+	if (ahi_port) {
+		ahi_io = (struct AHIRequest *) CreateIORequest(ahi_port, sizeof(struct AHIRequest));
+		if (ahi_io) {
+			ahi_io->ahir_Version = 2;
+			if (OpenDevice( AHINAME, AHI_NO_UNIT, (struct IORequest *) ahi_io, 0) == 0) {
+
+				AHIBase = (struct Library *)ahi_io->ahir_Std.io_Device;
+				IAHI = (struct AHIIFace*) GetInterface(AHIBase,"main",1L,NULL) ;
+			}
 		}
+	}
+}
+
+void close_ahi()
+{
+	if (AHIBase)	CloseDevice((struct IORequest *)ahi_io);
+	if (ahi_io)		DeleteIORequest((struct IORequest *)ahi_io);
+	if (ahi_port)	DeleteMsgPort(ahi_port);
+}
+
+#endif
+*/
+
+#define GET_PATH(drawer,file,dest)													\
+	dest = (char *) malloc( ( strlen(drawer) + strlen(file) + 2 ) * sizeof(char) );					\
+	if (dest)																		\
+	{                                                                       					  					\
+		if ( strlen(drawer) == 0) strcpy(dest, file);										\
+		else																		\
+		{																		\
+			if ( (drawer[ strlen(drawer) - 1  ] == ':')  ) sprintf(dest, "%s%s", drawer, file);			\
+			else sprintf(dest, "%s/%s", drawer, file);										\
+		}																		\
+	}
 
 /******************************/
 
@@ -301,14 +417,23 @@ void AmigaOS_Close(void)
 	}
 	//if (t) t=NULL;
 
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
 	RemoveAppPort();
 
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+#ifdef HVAE_APP_IOCN
 	if (MPLAppIcon)	RemoveAppIcon(MPLAppIcon);
-    if (DIcon)		FreeDiskObject(DIcon);
+	if (DIcon)		FreeDiskObject(DIcon);
+#endif
 
 /* ARexx */
-    if (NULL != rxHandler) EndArexx(rxHandler);
+//    if (NULL != rxHandler) EndArexx(rxHandler);
 /* ARexx */
+
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (AppID>0)
 	{
@@ -319,26 +444,90 @@ void AmigaOS_Close(void)
 	}
 	Free_Arg();
 
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 #ifdef USE_ASYNCIO
 	if (AsyncIOBase) CloseLibrary( AsyncIOBase ); AsyncIOBase = 0;
 	if (IAsyncIO) DropInterface((struct Interface*)IAsyncIO); IAsyncIO = 0;
 #endif
 
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (IntuitionBase) CloseLibrary(IntuitionBase); IntuitionBase = 0;
+	if (IIntuition) DropInterface((struct Interface*) IIntuition); IIntuition = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (GraphicsBase) CloseLibrary(GraphicsBase); GraphicsBase = 0;
+	if (IGraphics) DropInterface((struct Interface*) IGraphics); IGraphics = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
 	if (ApplicationBase) CloseLibrary(ApplicationBase); ApplicationBase = 0;
 	if (IApplication) DropInterface((struct Interface*)IApplication); IApplication = 0;
 
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (WorkbenchBase) CloseLibrary(WorkbenchBase); WorkbenchBase = 0;
+	if (IWorkbench) DropInterface((struct Interface*)IWorkbench); IWorkbench = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (KeymapBase) CloseLibrary(KeymapBase); KeymapBase = 0;
+	if (IKeymap) DropInterface((struct Interface*) IKeymap); IKeymap = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (LayersBase) CloseLibrary(LayersBase); LayersBase = 0;
+	if (ILayers) DropInterface((struct Interface*) ILayers); ILayers = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
 	if (AslBase) CloseLibrary(AslBase); AslBase = 0;
 	if (IAsl) DropInterface((struct Interface*)IAsl); IAsl = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	if (Picasso96Base) CloseLibrary(Picasso96Base); Picasso96Base = 0;
+	if (IP96) DropInterface((struct Interface*)IP96); IP96 = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (!TimerDevice) CloseDevice( (struct IORequest *) TimerDevice); TimerDevice = 0;
 	if (TimerRequest) FreeSysObject ( ASOT_IOREQUEST, TimerRequest ); TimerRequest = 0;
 	if (TimerMsgPort) FreeSysObject ( ASOT_PORT, TimerMsgPort ); TimerMsgPort = 0;
 	if (ITimer) DropInterface((struct Interface*) ITimer); ITimer = 0;
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);	
+
+	if (window_mx) FreeSysObject( ASOT_MUTEX , window_mx ); window_mx = 0;
+
+#ifdef CONFIG_AHI
+//	close_ahi();
+#endif
+
 }
 
 /******************************/
 /******************************/
+
+
+BOOL open_lib( const char *name, int ver , const char *iname, int iver, struct Library **base, struct Interface **interface)
+{
+	*interface = NULL;
+	*base = OpenLibrary( name , ver);
+	if (*base)
+	{
+		 *interface = GetInterface( *base,  iname , iver, TAG_END );
+		if (!*interface) dprintf("Unable to getInterface %s for %s %ld!\n",iname,name,ver);
+	}
+	else
+	{
+	   	dprintf("Unable to open the %s %ld!\n",name,ver);
+	}
+	return (*interface) ? TRUE : FALSE;
+}
+
 int AmigaOS_Open(int argc, char *argv[])
 {
 	AmigaOS_argv 					= NULL;
@@ -352,6 +541,9 @@ int AmigaOS_Open(int argc, char *argv[])
 		freopen("NIL:", "w", stderr);
 		freopen("NIL:", "w", stdout);
 	}
+
+	window_mx = AllocSysObject( ASOT_MUTEX, TAG_DONE );
+	if (!window_mx) 		return -1;
 
 	AppPort = AllocSysObject(ASOT_PORT,NULL);
 	if (!AppPort)
@@ -401,31 +593,22 @@ int AmigaOS_Open(int argc, char *argv[])
 	}
 #endif
 
-	if ( ! ( AslBase = OpenLibrary( (unsigned char*)"asl.library", 0L) ) )
-	{
-   		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Unable to open the asl.library\n");
-		return -1;
-	}
-	if (!(IAsl = (struct AslIFace *)GetInterface((struct Library *)AslBase,(unsigned char*)"main",1,NULL)))
-	{
-		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Failed to Get ASL Interface.\n");
-		return -1;
-	}
+#ifdef HAVE_CGX
+	if ( ! open_lib( "cybergraphics.library", 43L , "main", 1, &CyberGfxBase, (struct Interface **) &ICyberGfx  ) ) return -1;
+#endif
 
+	if ( ! open_lib( "asl.library", 0L , "main", 1, &AslBase, (struct Interface **) &IAsl  ) ) return -1;
+	if ( ! open_lib( "intuition.library", 51L , "main", 1, &IntuitionBase, (struct Interface **) &IIntuition  ) ) return -1;
+	if ( ! open_lib( "graphics.library", 51L , "main", 1, &GraphicsBase, (struct Interface **) &IGraphics  ) ) return -1;
+	if ( ! open_lib( "application.library", 51L , "application", 1, &ApplicationBase, (struct Interface **) &IApplication  ) ) return -1;
+	if ( ! open_lib( "workbench.library", 51L , "main", 1, &WorkbenchBase, (struct Interface **) &IWorkbench ) ) return -1;
+	if ( ! open_lib( "keymap.library", 51L , "main", 1, &KeymapBase, (struct Interface **) &IKeymap ) ) return -1;
+	if ( ! open_lib( "layers.library", 51L , "main", 1, &LayersBase, (struct Interface **) &ILayers ) ) return -1;
+	if ( ! open_lib( "Picasso96API.library", 51L , "main", 1, &Picasso96Base, (struct Interface **) &IP96 ) ) return -1;
 
-	ApplicationBase = OpenLibrary( (unsigned char*)"application.library", 51L);
-	if (!ApplicationBase)
-	{
-   		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Unable to open the application.library 51!\n");
-		return -1;
-	}
-
-	IApplication = (struct ApplicationIFace *)GetInterface((struct Library *)ApplicationBase,(unsigned char*)"application",1,NULL);
-	if (!IApplication)
-	{
-		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Failed to Get Application Interface.\n");
-		return -1;
-	}
+#ifdef CONFIG_AHI
+//	open_ahi();
+#endif
 
 	//Register the application so the ScreenBlanker don't bother us..
 	AppID = RegisterApplication((unsigned char*)"MPlayer",
@@ -449,13 +632,21 @@ int AmigaOS_Open(int argc, char *argv[])
 	//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
 
 /* ARexx */
+/*
 	if ( ! ( rxHandler = InitArexx() ) )
 	{
    		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Unable to open the arexx port (it requires arexx.class)\n");
 		AmigaOS_Close();
 		return -1;
 	}
+*/
 /* ARexx */
 
 	return 0;
+}
+
+void RemoveAppPort()
+{
+	FreeSysObject(ASOT_PORT,AppPort);
+	AppPort;
 }
