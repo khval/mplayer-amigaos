@@ -1,0 +1,12 @@
+
+if exists ram:liveforit-mplayer
+	delete ram:liveforit-mplayer all
+endif
+
+makedir ram:liveforit-mplayer
+copy mplayer ram:liveforit-mplayer
+copy conf ram:liveforit-mplayer/conf all
+copy LICENSE ram:liveforit-mplayer
+copy README ram:liveforit-mplayer
+copy README.os4 ram:liveforit-mplayer
+copy images/icons/MPlayer.info ram:liveforit-mplayer.info
