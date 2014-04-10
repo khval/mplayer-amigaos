@@ -1,3 +1,19 @@
+#ifdef __AMIGAOS4__
+#include <proto/dos.h>
+
+#define debug_level 0
+
+#if debug_level > 0
+#define dprintf( ... ) Printf( __VA_ARGS__ )
+#else
+#define dprintf(...) 
+#endif
+
+#else
+#define dprintf(...) 
+#endif
+
+
 /*
  * This file is part of MPlayer.
  *
@@ -689,10 +705,21 @@ void uninit_player(unsigned int mask){
     vo_vobsub=NULL;
   }
 
+  dprintf("%s:%ld: Time to Uninit audio\n",__FUNCTION__, __LINE__ );
+
   if(mask&INITIALIZED_AO){
+
+  dprintf("%s:%ld: Time to Uninit audio\n",__FUNCTION__, __LINE__ );
+
     initialized_flags&=~INITIALIZED_AO;
     current_module="uninit_ao";
+
+  dprintf("%s:%ld: Time to Uninit audio\n",__FUNCTION__, __LINE__ );
+
     if (mpctx->edl_muted) mixer_mute(&mpctx->mixer);
+
+  dprintf("%s:%ld: Time to Uninit audio\n",__FUNCTION__, __LINE__ );
+
     if (mpctx->audio_out) mpctx->audio_out->uninit(mpctx->eof?0:1);
     mpctx->audio_out=NULL;
   }
@@ -884,7 +911,13 @@ static void parse_cfgfiles( m_config_t* conf )
 char *conffile;
 int conffile_fd;
 if (!disable_system_conf &&
+
+#ifndef __amigaos4__
     m_config_parse_config_file(conf, MPLAYER_CONFDIR "/mplayer.conf") < 0)
+#else
+   m_config_parse_config_file(conf, MPLAYER_CONFDIR "mplayer.conf") < 0)
+#endif
+
   exit_player(EXIT_NONE);
 if ((conffile = get_path("")) == NULL) {
   mp_msg(MSGT_CPLAYER,MSGL_WARN,MSGTR_NoHomeDir);
@@ -892,9 +925,15 @@ if ((conffile = get_path("")) == NULL) {
 #ifdef __MINGW32__
   mkdir(conffile);
 #else
+
+#ifdef __amigaos4__
+if (conffile[strlen(conffile)-1]=='/') conffile[strlen(conffile)-1] = 0;
+#endif
+
   mkdir(conffile, 0777);
 #endif
   free(conffile);
+
   if ((conffile = get_path("config")) == NULL) {
     mp_msg(MSGT_CPLAYER,MSGL_ERR,MSGTR_GetpathProblem);
   } else {
@@ -1717,6 +1756,8 @@ void reinit_audio_chain(void) {
     return;
 
 init_error:
+  dprintf("%s:%ld: init_error",__FUNCTION__, __LINE__ );
+
     uninit_player(INITIALIZED_ACODEC|INITIALIZED_AO); // close codec and possibly AO
     mpctx->sh_audio=mpctx->d_audio->sh=NULL; // -> nosound
     mpctx->d_audio->id = -2;
@@ -2207,6 +2248,7 @@ static int fill_audio_out_buffers(void)
 	}
     }
     if (format_change) {
+  dprintf("%s:%ld: Time to Uninit audio",__FUNCTION__, __LINE__ );
 	uninit_player(INITIALIZED_AO);
 	reinit_audio_chain();
     }
@@ -3724,7 +3766,7 @@ if(!mpctx->sh_audio){
   mp_msg(MSGT_CPLAYER,MSGL_V,"Freeing %d unused audio chunks.\n",mpctx->d_audio->packs);
   ds_free_packs(mpctx->d_audio); // free buffered chunks
   //mpctx->d_audio->id=-2;         // do not read audio chunks
-  //uninit_player(INITIALIZED_AO); // close device
+  uninit_player(INITIALIZED_AO); // close device
 }
 if(!mpctx->sh_video){
    mp_msg(MSGT_CPLAYER,MSGL_INFO,MSGTR_Video_NoVideo);
@@ -4187,12 +4229,13 @@ if(use_gui && !mpctx->playtree_iter) {
 }
 #endif
 
+#if CONFIG_GUI
 if(use_gui || mpctx->playtree_iter != NULL || player_idle_mode){
     if(!mpctx->playtree_iter) filename = NULL;
     mpctx->eof = 0;
     goto play_next_file;
 }
-
+#endif
 
 exit_player_with_rc(EXIT_EOF, 0);
 
