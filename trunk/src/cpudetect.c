@@ -24,6 +24,15 @@ CpuCaps gCpuCaps;
 
 #include <stdlib.h>
 
+#if ARCH_PPC
+
+#if defined(__AMIGAOS4__)
+#include <proto/exec.h>
+#endif
+
+#endif
+
+
 #if ARCH_X86
 
 #include <stdio.h>
@@ -43,8 +52,6 @@ CpuCaps gCpuCaps;
 #elif defined(__OS2__)
 #define INCL_DOS
 #include <os2.h>
-#elif defined(__AMIGAOS4__)
-#include <proto/exec.h>
 #endif
 
 /* Thanks to the FreeBSD project for some of this cpuid code, and

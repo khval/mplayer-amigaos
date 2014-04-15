@@ -24,6 +24,11 @@
 #include <sys/sysctl.h>
 #include <machine/cpu.h>
 #elif defined(__AMIGAOS4__)
+
+#ifdef __USE_INLINE__
+#undef __USE_INLINE__
+#endif
+
 #include <exec/exec.h>
 #include <interfaces/exec.h>
 #include <proto/exec.h>
