@@ -4,7 +4,7 @@
 #include "mp_msg.h"
 #include "path.h"
 
-static const char * const homedir = "/progdir/";
+static const char * const homedir = "progdir:";
 static const char * const config_dir = "conf";
 
 char *codec_path = BINARY_CODECS_PATH;
