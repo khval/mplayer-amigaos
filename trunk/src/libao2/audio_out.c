@@ -1,3 +1,5 @@
+#include <proto/dos.h>
+
 /*
  * This file is part of MPlayer.
  *
@@ -31,6 +33,8 @@
 ao_data_t ao_data={0,0,0,0,OUTBURST,-1,0};
 char *ao_subdevice = NULL;
 
+extern const ao_functions_t audio_out_ahi;
+extern const ao_functions_t audio_out_ahi_dev;
 extern const ao_functions_t audio_out_oss;
 extern const ao_functions_t audio_out_coreaudio;
 extern const ao_functions_t audio_out_arts;
@@ -77,6 +81,14 @@ const ao_functions_t* const audio_out_drivers[] =
 #ifdef CONFIG_OSS_AUDIO
         &audio_out_oss,
 #endif
+
+#ifdef CONFIG_AHI
+#ifdef __morphos__
+   &audio_out_ahi,
+#endif
+   &audio_out_ahi_dev,
+#endif
+
 #ifdef CONFIG_ALSA
         &audio_out_alsa,
 #endif
@@ -189,6 +201,9 @@ const ao_functions_t* init_best_audio_out(char** ao_list,int use_plugin,int rate
         const ao_functions_t* audio_out=audio_out_drivers[i];
 //        if(audio_out->control(AOCONTROL_QUERY_FORMAT, (int)format) == CONTROL_TRUE)
         if(audio_out->init(rate,channels,format,flags))
+
+	Printf(" -- driver -- %08lx \n", audio_out);
+
             return audio_out; // success!
     }
     return NULL;
