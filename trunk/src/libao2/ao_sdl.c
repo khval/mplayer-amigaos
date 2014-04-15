@@ -1,3 +1,4 @@
+
 /*
  * SDLlib audio output driver for MPlayer
  *
@@ -19,6 +20,10 @@
  * along with MPlayer; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+#ifdef __AMIGAOS4__
+#include <proto/dos.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -186,11 +191,19 @@ static int init(int rate,int channels,int format,int flags){
 	/* Number of channels (mono/stereo) */
 	aspec.channels = channels;
 
-	/* The desired size of the audio buffer in samples. This number should be a power of two, and may be adjusted by the audio driver to a value more suitable for the hardware. Good values seem to range between 512 and 8192 inclusive, depending on the application and CPU speed. Smaller values yield faster response time, but can lead to underflow if the application is doing heavy processing and cannot fill the audio buffer in time. A stereo sample consists of both right and left channels in LR ordering. Note that the number of samples is directly related to time by the following formula: ms = (samples*1000)/freq */
+	/* The desired size of the audio buffer in samples. This number should be a power of two, and may be 
+	adjusted by the audio driver to a value more suitable for the hardware. Good values seem to range
+	 between 512 and 8192 inclusive, depending on the application and CPU speed. Smaller values yield
+	faster response time, but can lead to underflow if the application is doing heavy processing and cannot
+	fill the audio buffer in time. A stereo sample consists of both right and left channels in LR ordering.
+	Note that the number of samples is directly related to time by the following formula: ms = (samples*1000)/freq */
 	aspec.samples  = SAMPLESIZE;
 
-	/* This should be set to a function that will be called when the audio device is ready for more data. It is passed a pointer to the audio buffer, and the length in bytes of the audio buffer. This function usually runs in a separate thread, and so you should protect data structures that it accesses by calling SDL_LockAudio and SDL_UnlockAudio in your code. The callback prototype is:
-void callback(void *userdata, Uint8 *stream, int len); userdata is the pointer stored in userdata field of the SDL_AudioSpec. stream is a pointer to the audio buffer you want to fill with information and len is the length of the audio buffer in bytes. */
+	/* This should be set to a function that will be called when the audio device is ready for more data.
+	It is passed a pointer to the audio buffer, and the length in bytes of the audio buffer. This function usually runs in a separate thread,
+	and so you should protect data structures that it accesses by calling SDL_LockAudio and SDL_UnlockAudio in your code. The callback prototype is:
+	void callback(void *userdata, Uint8 *stream, int len); userdata is the pointer stored in userdata field of the SDL_AudioSpec.
+	stream is a pointer to the audio buffer you want to fill with information and len is the length of the audio buffer in bytes. */
 	aspec.callback = outputaudio;
 
 	/* This pointer is passed as the first parameter to the callback function. */
@@ -248,6 +261,9 @@ void callback(void *userdata, Uint8 *stream, int len); userdata is the pointer s
 
 // close audio device
 static void uninit(int immed){
+
+	Printf("-- uninit SDL audio --\n");
+
 	mp_msg(MSGT_AO,MSGL_V,"SDL: Audio Subsystem shutting down!\n");
 	if (!immed)
 	  usec_sleep(get_delay() * 1000 * 1000);
