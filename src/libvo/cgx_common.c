@@ -520,6 +520,7 @@ if(!use_gui)
 		UWORD Code;
 		UWORD Qualifier;
 		int MouseX, MouseY;
+		struct IntuiWheelData *mouse_wheel;
 
 		while ( ( IntuiMsg = (struct IntuiMessage *) GetMsg( My_Window->UserPort ) ) )
 		{
@@ -528,6 +529,7 @@ if(!use_gui)
 			Qualifier = IntuiMsg->Qualifier;
 			MouseX    = IntuiMsg->MouseX;
 			MouseY    = IntuiMsg->MouseY;
+			mouse_wheel = (struct IntuiWheelData *) IntuiMsg -> IAddress;
 
 			ReplyMsg( (struct Message *) IntuiMsg);
 
@@ -654,6 +656,18 @@ if(!use_gui)
 
 					retval = TRUE;
 					break;
+#ifdef __amigaos4__
+				case IDCMP_EXTENDEDMOUSE:
+					if (mouse_wheel -> WheelY < 0)
+					{
+						mplayer_put_key(KEY_RIGHT); break;
+					}
+					else	if (mouse_wheel->WheelY>0)
+					{
+						mplayer_put_key(KEY_LEFT); break;
+					}
+					break;
+#endif
 
 				case IDCMP_RAWKEY:
 					 switch ( Code )
