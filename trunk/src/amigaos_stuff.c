@@ -1,10 +1,11 @@
+
 #ifdef __AMIGAOS4__
 #include <proto/dos.h>
 
 #define debug_level 0
 
 #if debug_level > 0
-#define dprintf( ... ) IDOS->Printf( __VA_ARGS__ )
+#define dprintf( ... ) Printf( __VA_ARGS__ )
 #else
 #define dprintf(...) 
 #endif
@@ -416,9 +417,7 @@ void AmigaOS_Close(void)
 	}
 	//if (t) t=NULL;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
-	RemoveAppPort();
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -436,11 +435,27 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (AppID>0)
 	{
-		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, TRUE, TAG_DONE);
-		SetApplicationAttrs(AppID, APPATTR_NeedsGameMode, FALSE, TAG_DONE);
-		//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerAllow);
-		UnregisterApplication(AppID, NULL);
+		if (IApplication)
+		{
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+			SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, TRUE, TAG_DONE);
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+			SetApplicationAttrs(AppID, APPATTR_NeedsGameMode, FALSE, TAG_DONE);
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+			//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerAllow);
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+			UnregisterApplication(AppID, NULL);
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+		}
+		AppID = 0;
 	}
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
+	RemoveAppPort();
+
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+
 	Free_Arg();
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
@@ -626,9 +641,11 @@ int AmigaOS_Open(int argc, char *argv[])
 		AmigaOS_Close();
 		return -1;
 	}
-
-	SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
-	//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
+	else
+	{
+		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
+		//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
+	}
 
 /* ARexx */
 /*
@@ -646,6 +663,9 @@ int AmigaOS_Open(int argc, char *argv[])
 
 void RemoveAppPort()
 {
-	FreeSysObject(ASOT_PORT,AppPort);
-	AppPort;
+	if (AppPort)
+	{
+		FreeSysObject(ASOT_PORT,AppPort);
+		AppPort = NULL;
+	}
 }
