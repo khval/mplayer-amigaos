@@ -1,5 +1,6 @@
 
 #include <proto/exec.h>
+#include <proto/dos.h>
 #include <proto/intuition.h>
 #include <proto/arexx.h>
 #include <intuition/intuition.h>
@@ -112,12 +113,22 @@ ArexxHandle* InitArexx()
 		{
 			if ((ro->IARexx = (struct ARexxIFace*)GetInterface(ro->ArexxBase, "main", 1, NULL)))
 			{
-				ro->rxObject =  ARexxObject,
+				// macors needs this!!
+				IARexx = ro->IARexx;
+
+				if (IIntuition)
+				{
+					ro->rxObject =  ARexxObject,
 								AREXX_HostName, 	"MPLAYER",
 								AREXX_NoSlot,		FALSE,
 								AREXX_ReplyHook, 	NULL,
 								AREXX_Commands, 	rxCommands,
 								TAG_END);
+				}
+				else
+				{
+					ro->rxObject = NULL;
+				}
 
 				if(ro->rxObject) 
 				{
@@ -151,9 +162,9 @@ void EndArexx(ArexxHandle *ro)
 	if (ro) 
 	{
 		if (ro->rxObject) DisposeObject(ro->rxObject);
-    	if (ro->IARexx) DropInterface((struct Interface*)ro->IARexx);
-    	if (ro->ArexxBase) CloseLibrary(ro->ArexxBase);
-	    FreeVec(ro);
+		if (ro->IARexx) DropInterface((struct Interface*)ro->IARexx);
+		if (ro->ArexxBase) CloseLibrary(ro->ArexxBase);
+		FreeVec(ro);
 	}
 }
 

@@ -635,27 +635,20 @@ int AmigaOS_Open(int argc, char *argv[])
 			REGAPP_AllowsBlanker,		FALSE,
 			TAG_DONE);
 
-	if (AppID == 0)
-	{
-		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Failed to Register Application.\n");
-		AmigaOS_Close();
-		return -1;
-	}
-	else
+	if (AppID > 0)
 	{
 		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
-		//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
 	}
 
 /* ARexx */
-/*
+
 	if ( ! ( rxHandler = InitArexx() ) )
 	{
    		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Unable to open the arexx port (it requires arexx.class)\n");
 		AmigaOS_Close();
 		return -1;
 	}
-*/
+
 /* ARexx */
 
 	return 0;

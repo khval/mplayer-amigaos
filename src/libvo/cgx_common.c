@@ -43,6 +43,15 @@
 #include <libraries/keymap.h>
 #endif
 
+#ifndef   DOS_RDARGS_H
+#include <dos/rdargs.h>
+#endif
+
+
+#ifndef   INTUITION_CLASSES_H
+#include <intuition/classes.h>
+#endif
+
 #include <devices/inputevent.h>
 #include <utility/hooks.h>
 #include <workbench/workbench.h>
@@ -78,6 +87,13 @@ ULONG WantedModeID = 0;
 
 // Blank pointer
 UWORD *EmptyPointer = NULL;
+
+#include <mplayer-arexx.h>
+
+/* ARexx */
+extern struct ArexxHandle *rxHandler; 
+/* ARexx */
+
 
 extern uint32_t is_fullscreen;
 char PubScreenName[128] = "";
@@ -483,12 +499,12 @@ if(!use_gui)
 {
 #endif
 
-
-#if MPLAYER
-	/* REXX PORT */
-	gui_handle_events();
-	/* END REXX PORT */
-#endif
+/* ARexx */
+    if(SetSignal(0L,rxHandler->sigmask) & rxHandler->sigmask)
+    {
+        IDoMethod(rxHandler->rxObject,AM_HANDLEEVENT);
+    }
+/* ARexx */
 
 #ifdef CONFIG_GUI
 }
