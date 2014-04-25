@@ -1,6 +1,6 @@
 /*
- *  cgx_common.c
- *  common CGX function for MPlayer MorphOS
+ *  gfx_common.c
+ *  common GFX function for MPlayer MorphOS
  *  Written by DET Nicolas
  *  Maintained and updated by Fabien Coeurjoly
 */
@@ -81,8 +81,8 @@
 
 extern APTR window_mx;
 
-// Set here, and use in the vo_cgx_**
-char * cgx_monitor = NULL;
+// Set here, and use in the vo_gfx_**
+char * gfx_monitor = NULL;
 ULONG WantedModeID = 0;
 
 // Blank pointer
@@ -102,7 +102,7 @@ char PubScreenName[128] = "";
 #define TINYBORDER			1
 #define DISAPBORDER			2
 #define ALWAYSBORDER		3
-ULONG Cgx_BorderMode = ALWAYSBORDER;
+ULONG gfx_BorderMode = ALWAYSBORDER;
 
 // Timer for the pointer...
 ULONG p_mics1=0, p_mics2=0, p_secs1=0, p_secs2=0;
@@ -110,7 +110,7 @@ BOOL mouse_hidden=FALSE;
 
 static BOOL mouseonborder;
 
-void Cgx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable);
+void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable);
 
 #ifdef __amigaos4__
 
@@ -181,7 +181,7 @@ static const char *Messages[]=
 	"Uzul parle moi de ton monde natal.\n",
 };
 
-void Cgx_Message(void)
+void gfx_Message(void)
 {
 #ifndef __amigaos4__
 	struct timeval tv;
@@ -198,13 +198,13 @@ void Cgx_Message(void)
 }
 
 /***************************/
-BOOL Cgx_GiveArg(const char *arg)
+BOOL gfx_GiveArg(const char *arg)
 {
 	STRPTR PtrArg = (STRPTR) arg;
 
 	// Default settings
-	cgx_monitor 		= NULL;
-	Cgx_BorderMode 	= ALWAYSBORDER;
+	gfx_monitor 		= NULL;
+	gfx_BorderMode 	= ALWAYSBORDER;
 
 	if ( arg && strlen(arg) )
 	{
@@ -214,9 +214,9 @@ BOOL Cgx_GiveArg(const char *arg)
 		if (!PtrSeparator)
 		{
 			// Ok no ":", so we have only 1 arg and it's the monitor
-			cgx_monitor = AllocVec( strlen(arg)+1 , MEMF_ANY);
-			if (!cgx_monitor) return FALSE;
-			strcpy( cgx_monitor, PtrArg );
+			gfx_monitor = AllocVec( strlen(arg)+1 , MEMF_ANY);
+			if (!gfx_monitor) return FALSE;
+			strcpy( gfx_monitor, PtrArg );
 		}
 		else
 		{
@@ -227,27 +227,27 @@ BOOL Cgx_GiveArg(const char *arg)
 
 			if (FirstArgSize > 1)
 			{
-				cgx_monitor = AllocVec( FirstArgSize , MEMF_ANY);
-				if (!cgx_monitor) return FALSE;
-				memcpy( cgx_monitor, PtrArg, FirstArgSize); // PtrArg - PtrSeparator -> Size of the ard
-				cgx_monitor[FirstArgSize -1] = '\0';
+				gfx_monitor = AllocVec( FirstArgSize , MEMF_ANY);
+				if (!gfx_monitor) return FALSE;
+				memcpy( gfx_monitor, PtrArg, FirstArgSize); // PtrArg - PtrSeparator -> Size of the ard
+				gfx_monitor[FirstArgSize -1] = '\0';
 			}
 
 			// Second arg is the Bordermode
 			PtrArg = PtrSeparator + 1;
 			if (!*PtrArg) goto end;
 
-			if (!(memcmp(PtrArg, "NOBORDER", strlen("NOBORDER") ) ) ) Cgx_BorderMode = NOBORDER;
-			else if (!(memcmp(PtrArg, "TINYBORDER", strlen("TINYBORDER") ) ) ) Cgx_BorderMode = TINYBORDER;
-			else if (!(memcmp(PtrArg, "ALWAYSBORDER", strlen("ALWAYSBORDER") ) ) ) Cgx_BorderMode = ALWAYSBORDER;
-			else if (!(memcmp(PtrArg, "DISAPBORDER", strlen("DISAPBORDER") ) ) ) Cgx_BorderMode = DISAPBORDER;
+			if (!(memcmp(PtrArg, "NOBORDER", strlen("NOBORDER") ) ) ) gfx_BorderMode = NOBORDER;
+			else if (!(memcmp(PtrArg, "TINYBORDER", strlen("TINYBORDER") ) ) ) gfx_BorderMode = TINYBORDER;
+			else if (!(memcmp(PtrArg, "ALWAYSBORDER", strlen("ALWAYSBORDER") ) ) ) gfx_BorderMode = ALWAYSBORDER;
+			else if (!(memcmp(PtrArg, "DISAPBORDER", strlen("DISAPBORDER") ) ) ) gfx_BorderMode = DISAPBORDER;
 
 #ifdef CONFIG_GUI
 			if(use_gui && mygui->embedded) /* Check modes supported by GUI */
 			{
-				if(Cgx_BorderMode == NOBORDER || Cgx_BorderMode == TINYBORDER || Cgx_BorderMode == DISAPBORDER)
+				if(gfx_BorderMode == NOBORDER || gfx_BorderMode == TINYBORDER || gfx_BorderMode == DISAPBORDER)
 				{
-					Cgx_BorderMode = ALWAYSBORDER;
+					gfx_BorderMode = ALWAYSBORDER;
 				}
 			}
 #endif
@@ -308,12 +308,12 @@ end:
 }
 
 /***************************/
-VOID Cgx_ReleaseArg(VOID)
+VOID gfx_ReleaseArg(VOID)
 {
-	if (cgx_monitor)
+	if (gfx_monitor)
 	{
-		FreeVec(cgx_monitor);
-		cgx_monitor = NULL;
+		FreeVec(gfx_monitor);
+		gfx_monitor = NULL;
 	}
 }
 
@@ -366,9 +366,9 @@ void RemoveGadgets(struct Window * My_Window)
 	RemoveGadget(My_Window, &MySizeGadget);
 }
 
-void Cgx_StartWindow(struct Window *My_Window)
+void gfx_StartWindow(struct Window *My_Window)
 {
-	switch (Cgx_BorderMode)
+	switch (gfx_BorderMode)
 	{
 		case NOBORDER:
 		case TINYBORDER:
@@ -399,11 +399,11 @@ void Cgx_StartWindow(struct Window *My_Window)
 }
 
 /***************************/
-void Cgx_StopWindow(struct Window *My_Window)
+void gfx_StopWindow(struct Window *My_Window)
 {
 	if(My_Window)
 	{
-		switch (Cgx_BorderMode)
+		switch (gfx_BorderMode)
 		{
 			case TINYBORDER:
 			case NOBORDER:
@@ -413,9 +413,9 @@ void Cgx_StopWindow(struct Window *My_Window)
 	}
 }
 
-void Cgx_HandleBorder(struct Window *My_Window, ULONG handle_mouse)
+void gfx_HandleBorder(struct Window *My_Window, ULONG handle_mouse)
 {
-	if (Cgx_BorderMode == DISAPBORDER && !is_fullscreen)
+	if (gfx_BorderMode == DISAPBORDER && !is_fullscreen)
 	{
 		ULONG toggleborder = FALSE;
 
@@ -443,7 +443,7 @@ void Cgx_HandleBorder(struct Window *My_Window, ULONG handle_mouse)
 }
 
 /***************************/
-void Cgx_Start(struct Window *My_Window, BOOL FullScreen)
+void gfx_Start(struct Window *My_Window, BOOL FullScreen)
 {
 	if((awport = CreateMsgPort()))
 	{
@@ -457,7 +457,7 @@ void Cgx_Start(struct Window *My_Window, BOOL FullScreen)
 }
 
 /***************************/
-void Cgx_Stop(struct Window *My_Window)
+void gfx_Stop(struct Window *My_Window)
 {
 	struct AppMessage *amsg;
 
@@ -478,7 +478,7 @@ void Cgx_Stop(struct Window *My_Window)
 
 /***************************************************/
 
-BOOL Cgx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,
+BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,
 	uint32_t *window_left, uint32_t *window_top )
 {
 	ULONG retval = FALSE;
@@ -522,7 +522,7 @@ if(!use_gui)
 			if (p_secs2-p_secs1>=2)
 			{
 				// Ok, let's hide ;)
-				Cgx_ShowMouse(My_Screen, My_Window, FALSE);
+				gfx_ShowMouse(My_Screen, My_Window, FALSE);
 				p_secs1=p_secs2=p_mics1=p_mics2=0;
 			}
 		}
@@ -560,13 +560,13 @@ if(!use_gui)
 
 				case IDCMP_ACTIVEWINDOW:
 #ifndef __amigaos4__
-					if (Cgx_BorderMode == DISAPBORDER) TransparencyControl(My_Window,TRANSPCONTROLMETHOD_UPDATETRANSPARENCY,NULL);
+					if (gfx_BorderMode == DISAPBORDER) TransparencyControl(My_Window,TRANSPCONTROLMETHOD_UPDATETRANSPARENCY,NULL);
 #endif
 					break;
 
 				case IDCMP_INACTIVEWINDOW:
 #ifndef __amigaos4__
-					if (Cgx_BorderMode == DISAPBORDER) TransparencyControl(My_Window,TRANSPCONTROLMETHOD_UPDATETRANSPARENCY,NULL);
+					if (gfx_BorderMode == DISAPBORDER) TransparencyControl(My_Window,TRANSPCONTROLMETHOD_UPDATETRANSPARENCY,NULL);
 #endif
 					break;
 
@@ -575,7 +575,7 @@ if(!use_gui)
 					// Blanks pointer stuff
 					if (is_fullscreen && mouse_hidden)
 					{
-						Cgx_ShowMouse(My_Screen, My_Window, TRUE);
+						gfx_ShowMouse(My_Screen, My_Window, TRUE);
 					}
 
 					switch(Code)
@@ -626,7 +626,7 @@ if(!use_gui)
 						{
 							if (mouse_hidden)
 							{
-								Cgx_ShowMouse(My_Screen, My_Window, TRUE);
+								gfx_ShowMouse(My_Screen, My_Window, TRUE);
 								/*
 								#ifdef CONFIG_GUI
 								if (use_gui)
@@ -636,7 +636,7 @@ if(!use_gui)
 							}
 						}
 #ifndef __amigaos4__						
-						if (Cgx_BorderMode == DISAPBORDER)
+						if (gfx_BorderMode == DISAPBORDER)
 						{
 							BOOL mouse = ismouseon(My_Window);
 
@@ -664,7 +664,7 @@ if(!use_gui)
 					vo_dwidth = *window_width;
 					vo_dheight = *window_height;
 
-					if(Cgx_BorderMode == NOBORDER ||Cgx_BorderMode == TINYBORDER)
+					if(gfx_BorderMode == NOBORDER ||gfx_BorderMode == TINYBORDER)
 					{
 						RemoveGadgets(My_Window);
 						UpdateGadgets(My_Window, *window_width, *window_height);
@@ -873,7 +873,7 @@ static void MyTranspHook(struct Hook *hook,struct Window *window,struct Transpar
 
 static int blanker_count = 0; /* not too useful, but it should be 0 at the end */
 
-void Cgx_ControlBlanker(struct Screen * screen, ULONG enable)
+void gfx_ControlBlanker(struct Screen * screen, ULONG enable)
 {
 	struct Library * ibase = (struct Library *) IntuitionBase;
 	if(ibase)
@@ -909,12 +909,12 @@ void Cgx_ControlBlanker(struct Screen * screen, ULONG enable)
 }
 
 /* Just here for debug purpose */
-void Cgx_BlankerState(void)
+void gfx_BlankerState(void)
 {
 //	  kprintf("blanker_count = %d\n", blanker_count);
 }
 
-void Cgx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable)
+void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable)
 {
 	struct Library * ibase = (struct Library *) IntuitionBase;
 	if(ibase)

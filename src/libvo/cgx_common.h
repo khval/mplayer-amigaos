@@ -1,5 +1,5 @@
-#ifndef __CGX_COMMON__
-#define __CGX_COMMON__
+#ifndef __gfx_COMMON__
+#define __gfx_COMMON__
 
 #include <proto/exec.h>
 #include <proto/graphics.h>
@@ -27,14 +27,14 @@ extern struct Library * 		  LayersBase;
 #define TINYBORDER			1
 #define TRANSPBORDER		2
 #define ALWAYSBORDER		3
-extern ULONG Cgx_BorderMode;
+extern ULONG gfx_BorderMode;
 
 /* some flags */
-#define CGX_FULLSCREEN	( 1L << 0)	// Fullscreen flags has you guessed
-#define CGX_FASTMODE	( 1L << 1) 	// Tell to the driver to privilege speed instead of quality if possible
-#define CGX_NOSCALE	    ( 1L << 2)	// Do not scale (this way it's faster but can be very ugly)
-#define CGX_BUFFERING	( 1L << 3)	// Ask to use Multiple buffering if available
-#define CGX_NOPLANAR	( 1L << 4)	// Don't use planar overlay
+#define gfx_FULLSCREEN	( 1L << 0)	// Fullscreen flags has you guessed
+#define gfx_FASTMODE	( 1L << 1) 	// Tell to the driver to privilege speed instead of quality if possible
+#define gfx_NOSCALE	    ( 1L << 2)	// Do not scale (this way it's faster but can be very ugly)
+#define gfx_BUFFERING	( 1L << 3)	// Ask to use Multiple buffering if available
+#define gfx_NOPLANAR	( 1L << 4)	// Don't use planar overlay
 
 #ifndef SA_StopBlanker
 #define SA_StopBlanker (SA_Dummy + 121)
@@ -45,26 +45,26 @@ extern ULONG Cgx_BorderMode;
 #endif
 
 /***/
-extern char * cgx_monitor;
+extern char * gfx_monitor;
 
 /***************************/
-BOOL Cgx_GiveArg(const char *arg);
-VOID Cgx_ReleaseArg(VOID);
+BOOL gfx_GiveArg(const char *arg);
+VOID gfx_ReleaseArg(VOID);
 
-void Cgx_StartWindow(struct Window *My_Window);
-void Cgx_StopWindow(struct Window *My_Window);
-void Cgx_HandleBorder(struct Window *My_Window, ULONG handle_mouse);
+void gfx_StartWindow(struct Window *My_Window);
+void gfx_StopWindow(struct Window *My_Window);
+void gfx_HandleBorder(struct Window *My_Window, ULONG handle_mouse);
 
-BOOL Cgx_CheckEvents(struct Screen * My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *windon_width,
+BOOL gfx_CheckEvents(struct Screen * My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *windon_width,
 		uint32_t *window_left, uint32_t *windon_top);
-void Cgx_Start(struct Window *My_Window);
-void Cgx_Stop(struct Window *My_Window);
+void gfx_Start(struct Window *My_Window);
+void gfx_Stop(struct Window *My_Window);
 
-void Cgx_Message(void);
+void gfx_Message(void);
 
-void Cgx_ControlBlanker(struct Screen * screen, ULONG enable);
-void Cgx_BlankerState(void);
-void Cgx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable);
+void gfx_ControlBlanker(struct Screen * screen, ULONG enable);
+void gfx_BlankerState(void);
+void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable);
 
 /******************************/
 

@@ -1,5 +1,5 @@
 /*
- *  vo_cgx_vmem.c
+ *  vo_gfx_vmem.c
  *  VO module for MPlayer MorphOS & AmigaOS4
  *  using CGX/direct VMEM
  *  Writen by DET Nicolas
@@ -72,7 +72,7 @@ static vo_info_t info =
 	"CyberGraphX video output (WPA)",
 	"cgx_wpa",
 	"DET Nicolas",
-	"MorphOS $ AmigaOS4 rules da world !"
+	"AmigaOS4 rules da world !"
 };
 
 LIBVO_EXTERN(cgx_wpa)
@@ -199,14 +199,14 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 /******************************** PREINIT ******************************************/
 static int preinit(const char *arg)
 {
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Welcome man !.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Welcome man !.\n");
 
-	if (!Cgx_GiveArg(arg))
+	if (!gfx_GiveArg(arg))
 	{
 		return -1;	
 	}
 
-	Cgx_Message();
+	gfx_Message();
 
 	return 0;
 }
@@ -246,7 +246,7 @@ static ULONG Open_Window()
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
-			switch(Cgx_BorderMode)
+			switch(gfx_BorderMode)
 			{
 				case NOBORDER:
 						bw = 0;
@@ -276,7 +276,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 				WindowActivate = FALSE;
 #endif
 			
-			switch(Cgx_BorderMode)
+			switch(gfx_BorderMode)
 			{
 				case NOBORDER:
 
@@ -347,7 +347,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 						WA_CloseGadget,     TRUE,
 						WA_DepthGadget,     TRUE,
 						WA_DragBar,         TRUE,
-						WA_Borderless,      (Cgx_BorderMode == NOBORDER) ? TRUE : FALSE,
+						WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
 						WA_SizeGadget,      FALSE,
 						WA_Activate,        WindowActivate,
 						WA_IDCMP,           IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
@@ -381,8 +381,8 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		return INVALID_ID;
 	}
 
-	offset_x = (Cgx_BorderMode == NOBORDER) ? 0 : My_Window->BorderRight;	
-	offset_y = (Cgx_BorderMode == NOBORDER) ? 0 : My_Window->BorderTop;
+	offset_x = (gfx_BorderMode == NOBORDER) ? 0 : My_Window->BorderRight;	
+	offset_y = (gfx_BorderMode == NOBORDER) ? 0 : My_Window->BorderTop;
 
 	internal_offset_x = 0;
 	internal_offset_y = 0;
@@ -399,8 +399,8 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
-	Cgx_StartWindow(My_Window);
-	Cgx_ControlBlanker(My_Screen, FALSE);
+	gfx_StartWindow(My_Window);
+	gfx_ControlBlanker(My_Screen, FALSE);
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -493,8 +493,8 @@ if (x>0) {
 		screen_height = buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1;
 	}
 
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Full screen.\n");
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Prefered screen is : %s\n", (cgx_monitor) ? cgx_monitor : "default" );
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Full screen.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Prefered screen is : %s\n", (gfx_monitor) ? gfx_monitor : "default" );
 
 	My_Screen = OpenScreenTags ( NULL,
 		SA_DisplayID,  ModeID,
@@ -567,7 +567,7 @@ if (x>0) {
 	vo_fs = 1;
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-	Cgx_ControlBlanker(My_Screen, FALSE);
+	gfx_ControlBlanker(My_Screen, FALSE);
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	return ModeID;
@@ -667,7 +667,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
-	Cgx_Start(My_Window);
+	gfx_Start(My_Window);
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -762,10 +762,10 @@ static void FreeGfx(void)
 #endif
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-	Cgx_ControlBlanker(My_Screen, TRUE);
+	gfx_ControlBlanker(My_Screen, TRUE);
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
-	Cgx_Stop(My_Window);
+	gfx_Stop(My_Window);
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -802,7 +802,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (My_Window) 
 	{
-		Cgx_StopWindow(My_Window);
+		gfx_StopWindow(My_Window);
 		CloseWindow(My_Window);
 		My_Window=NULL;
 	}
@@ -833,7 +833,7 @@ dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
 	  EmptyPointer=NULL;
 	}
 dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
-	Cgx_ReleaseArg();
+	gfx_ReleaseArg();
 dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
 }
 
@@ -852,15 +852,15 @@ static int control(uint32_t request, void *data, ...)
 			return VO_TRUE;
 
 		case VOCTRL_PAUSE:
-			Cgx_Stop(My_Window);
+			gfx_Stop(My_Window);
 			if (rp) InstallLayerHook(rp->Layer, &BackFill_Hook);
-			Cgx_ControlBlanker(My_Screen, TRUE);
+			gfx_ControlBlanker(My_Screen, TRUE);
 			return VO_TRUE;					
 
 		case VOCTRL_RESUME:
-			Cgx_Start(My_Window);
+			gfx_Start(My_Window);
 			if (rp) InstallLayerHook(rp->Layer, NULL);
-			Cgx_ControlBlanker(My_Screen, FALSE);
+			gfx_ControlBlanker(My_Screen, FALSE);
 			return VO_TRUE;
 
 		case VOCTRL_QUERY_FORMAT:
@@ -873,7 +873,7 @@ static int control(uint32_t request, void *data, ...)
 /******************************** CHECK_EVENTS    ******************************************/
 static void check_events(void)
 {
-	Cgx_CheckEvents(My_Screen, My_Window, &window_height, &window_width, &win_left, &win_top);
+	gfx_CheckEvents(My_Screen, My_Window, &window_height, &window_width, &win_left, &win_top);
 }
 
 static int query_format(uint32_t format)
