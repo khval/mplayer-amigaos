@@ -199,7 +199,7 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 /******************************** PREINIT ******************************************/
 static int preinit(const char *arg)
 {
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Welcome man !.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Welcome man !.\n");
 
 	if (!gfx_GiveArg(arg))
 	{
@@ -493,8 +493,8 @@ if (x>0) {
 		screen_height = buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1;
 	}
 
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Full screen.\n");
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [gfx_wpa] Prefered screen is : %s\n", (gfx_monitor) ? gfx_monitor : "default" );
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Full screen.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Prefered screen is : %s\n", (gfx_monitor) ? gfx_monitor : "default" );
 
 	My_Screen = OpenScreenTags ( NULL,
 		SA_DisplayID,  ModeID,
