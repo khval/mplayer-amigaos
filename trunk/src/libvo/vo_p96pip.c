@@ -3,6 +3,7 @@
  *  VO module for MPlayer AmigaOS4
  *  using p96 PIP
  *  Writen by Jörg strohmayer
+ *  modified by Kjetil hvalstrand
 */
 
 #define USE_VMEM64	1
@@ -30,8 +31,6 @@
 #include "../libmpcodecs/vf_scale.h"
 #include "../input/input.h"
 
-//#include <inttypes.h>     // Fix <postproc/rgb2rgb.h> bug
-//#include <postproc/rgb2rgb.h>
 #include <version.h>
 
 // OS specific
@@ -73,7 +72,7 @@ static vo_info_t info =
 {
 	"Picasso96 overlay",
 	"p96_pip",
-	"Kjetil Hvalstrand",
+	"Jörg strohmayer",
 	"AmigaOS4 rules da world !"
 };
 
