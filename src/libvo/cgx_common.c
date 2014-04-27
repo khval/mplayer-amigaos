@@ -41,6 +41,7 @@
 
 #ifdef __amigaos4__
 #include <libraries/keymap.h>
+#include <proto/Picasso96API.h>
 #endif
 
 #ifndef   DOS_RDARGS_H
@@ -949,3 +950,22 @@ void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable)
 }
 
 
+void gfx_get_max_mode(int depth_bits, ULONG *mw,ULONG *mh)
+{
+	struct List *ml;
+	struct P96Mode	*mn;
+	ULONG w,h;
+	ULONG a,ma = 0;
+
+	if(ml=p96AllocModeListTags(	P96MA_MinDepth, depth_bits, P96MA_MaxDepth, depth_bits,  TAG_DONE))
+	{
+		for(mn=(struct P96Mode *)(ml->lh_Head);mn->Node.ln_Succ;mn=(struct P96Mode *)mn->Node.ln_Succ)
+		{
+				w =  p96GetModeIDAttr( mn -> DisplayID, P96IDA_WIDTH );
+				h =  p96GetModeIDAttr( mn -> DisplayID, P96IDA_HEIGHT );
+				a = w * h;
+				if (a >ma) { ma = a; *mw = w; *mh = h; }
+		}
+		p96FreeModeList(ml);
+	}
+}
