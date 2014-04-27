@@ -96,9 +96,6 @@ APTR window_mx;
 // macros needs this global.
 struct ARexxIFace		*IARexx = NULL;
 
-struct Device 			 *AHIBase = NULL;
-struct AHIIFace		*IAHI = NULL;
-
 struct Device 			 *TimerBase = NULL;
 //extern struct TimerIFace *ITimer;
 
@@ -150,44 +147,6 @@ extern void RemoveAppPort(void);
 extern struct DiskObject *DIcon;
 extern struct AppIcon 	 *MPLAppIcon;
 
-/*
-static struct MsgPort *ahi_port = NULL;			// Port for AHI
-static struct AHIRequest *ahi_io = NULL;		// IORequest for AHI
-*/
-
-/*
-#ifdef CONFIG_AHI
-void open_ahi()
-{
-	// Open AHI
-
-	ahi_io	= NULL;
-	IAHI		= NULL;
-	AHIBase	= NULL;
-
-	ahi_port = CreateMsgPort();
-	if (ahi_port) {
-		ahi_io = (struct AHIRequest *) CreateIORequest(ahi_port, sizeof(struct AHIRequest));
-		if (ahi_io) {
-			ahi_io->ahir_Version = 2;
-			if (OpenDevice( AHINAME, AHI_NO_UNIT, (struct IORequest *) ahi_io, 0) == 0) {
-
-				AHIBase = (struct Library *)ahi_io->ahir_Std.io_Device;
-				IAHI = (struct AHIIFace*) GetInterface(AHIBase,"main",1L,NULL) ;
-			}
-		}
-	}
-}
-
-void close_ahi()
-{
-	if (AHIBase)	CloseDevice((struct IORequest *)ahi_io);
-	if (ahi_io)		DeleteIORequest((struct IORequest *)ahi_io);
-	if (ahi_port)	DeleteMsgPort(ahi_port);
-}
-
-#endif
-*/
 
 #define GET_PATH(drawer,file,dest)													\
 	dest = (char *) malloc( ( strlen(drawer) + strlen(file) + 2 ) * sizeof(char) );					\
@@ -426,10 +385,14 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	if (DIcon)		FreeDiskObject(DIcon);
 #endif
 
-/* ARexx */
-//    if (NULL != rxHandler) EndArexx(rxHandler);
-/* ARexx */
+dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
+	if (IARexx)		// if Arexx lib is open.
+	{
+		if (NULL != rxHandler) EndArexx(rxHandler);
+	}
+
+/* ARexx */
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -439,13 +402,9 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		{
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, TRUE, TAG_DONE);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			SetApplicationAttrs(AppID, APPATTR_NeedsGameMode, FALSE, TAG_DONE);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerAllow);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			UnregisterApplication(AppID, NULL);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		}
 		AppID = 0;
 	}
@@ -635,9 +594,16 @@ int AmigaOS_Open(int argc, char *argv[])
 			REGAPP_AllowsBlanker,		FALSE,
 			TAG_DONE);
 
-	if (AppID > 0)
+	if (AppID == 0)
+	{
+		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Failed to Register Application.\n");
+		AmigaOS_Close();
+		return -1;
+	}
+	else
 	{
 		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
+		//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
 	}
 
 /* ARexx */
