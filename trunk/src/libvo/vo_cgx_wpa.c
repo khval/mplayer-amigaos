@@ -332,13 +332,12 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 						WA_CustomScreen,    (ULONG) My_Screen,
 #ifdef __morphos__
 						WA_Title,         (ULONG) filename ? MorphOS_GetWindowTitle() : "MPlayer for MorphOS",
+						WA_ScreenTitle,     (ULONG) "MPlayer xxxxx for MorphOS",
 #endif
-
 #ifdef __amigaos4__
 						WA_Title,         "MPlayer for AmigaOS4",
+						WA_ScreenTitle,     (ULONG) "MPlayer for AmigaOS",
 #endif
-
-						WA_ScreenTitle,     (ULONG) "MPlayer xxxxx for MorphOS",
 						WA_Left,            win_left,
 						WA_Top,             win_top,
 						WA_InnerWidth,      window_width,
@@ -370,8 +369,6 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		My_Screen= NULL;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 		EmptyPointer = AllocVec(16, MEMF_PUBLIC | MEMF_CLEAR);
 
 	if ( !My_Window || !EmptyPointer)
@@ -393,16 +390,10 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		return INVALID_ID;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	ScreenToFront(My_Window->WScreen);
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	gfx_StartWindow(My_Window);
 	gfx_ControlBlanker(My_Screen, FALSE);
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	return ModeID;
 }
@@ -439,7 +430,12 @@ static ULONG Open_FullScreen()
 		return INVALID_ID;
 	}
 
+#ifdef __morphos__
 	depth = ( FALSE ) ? 16 : GetCyberIDAttr( CYBRIDATTR_DEPTH , ModeID);
+#endif
+#ifdef __amigaos4__
+	depth = ( FALSE ) ? 16 : p96GetModeIDAttr( ModeID, P96IDA_DEPTH );
+#endif
 
 	screen_width=window_width;
 	screen_height=window_height;
@@ -448,11 +444,13 @@ static ULONG Open_FullScreen()
 	{
 		while (1) 
 		{
-			ModeID = BestCModeIDTags(
-				CYBRBIDTG_Depth, depth,
-			    CYBRBIDTG_NominalWidth, screen_width,
-			    CYBRBIDTG_NominalHeight, screen_height,
-			TAG_DONE);
+#ifdef __morphos__
+			ModeID = BestCModeIDTags(	CYBRBIDTG_Depth, depth,CYBRBIDTG_NominalWidth, screen_width,CYBRBIDTG_NominalHeight, screen_height,TAG_DONE);
+#endif
+#ifdef __amigaos4__
+			ModeID = p96BestModeIDTags(P96BIDTAG_Depth, depth,P96BIDTAG_NominalWidth, screen_width,P96BIDTAG_NominalHeight, screen_height,TAG_DONE);
+#endif
+
 printf("screen_width=%d screen_height=%d image_width=%d image_height=%d %x\n",screen_width,screen_height,image_width,image_height,ModeID);
 
 			if ( ModeID == INVALID_ID ) 
@@ -461,32 +459,33 @@ printf("screen_width=%d screen_height=%d image_width=%d image_height=%d %x\n",sc
 				return INVALID_ID;
 			}
 
-{
-long x;
-x=GetDisplayInfoData( NULL, &buffer_Dimmension, sizeof(struct DimensionInfo), DTAG_DIMS, ModeID);
-printf("GetDisplayInfoData=%d\n",x);
-printf("sizeof(struct DimensionInfo)=%d\n",sizeof(struct DimensionInfo));
-if (x>0) {
-  printf("maxx=%d minx=%d maxy=%d miny=%d\n",
-         buffer_Dimmension.Nominal.MaxX,buffer_Dimmension.Nominal.MinX,
-			buffer_Dimmension.Nominal.MaxY,buffer_Dimmension.Nominal.MinY);
-  if(buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1 >= image_width &&
-     buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1 >= image_height ) 
 			{
+				long x;
+				x=GetDisplayInfoData( NULL, &buffer_Dimmension, sizeof(struct DimensionInfo), DTAG_DIMS, ModeID);
+
+				if (x>0)
+				{
+					printf("maxx=%d minx=%d maxy=%d miny=%d\n",
+						buffer_Dimmension.Nominal.MaxX,buffer_Dimmension.Nominal.MinX,
+						buffer_Dimmension.Nominal.MaxY,buffer_Dimmension.Nominal.MinY);
+					if(buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1 >= image_width &&
+						buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1 >= image_height ) 
+					{
+						break;
+					}
+				}
+			}
+
+			screen_width  += 10;
+			screen_height += 10;
+
+			if ((screen_width > max_width)||(screen_height >max_height))
+			{
+				screen_width = max_width;
+				screen_height =max_height;
 				break;
 			}
-}
-}
-/*
-			if ( GetDisplayInfoData( NULL, &buffer_Dimmension, sizeof(struct DimensionInfo), DTAG_DIMS, ModeID) == sizeof(struct DimensionInfo) &&
-				     buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1 >= window_width &&
-					 	buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1 >= window_height ) 
-			{
-				break;
-			}
-*/
-		    screen_width  += 10;
-		    screen_height += 10;
+
 		}
 
 		screen_width  = buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1;
@@ -566,10 +565,7 @@ if (x>0) {
 */
 	vo_fs = 1;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	gfx_ControlBlanker(My_Screen, FALSE);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	return ModeID;
 } 
 
@@ -608,19 +604,10 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 {
 	ULONG ModeID = INVALID_ID;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (My_Window) return 0;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	is_fullscreen = fullscreen;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	image_format = in_format;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	// backup info
 	image_bpp = 4;
@@ -752,7 +739,6 @@ static int draw_frame(uint8_t *src[])
 static void FreeGfx(void)
 {
 
-
 #ifdef CONFIG_GUI
 	if (use_gui)
 	{
@@ -761,15 +747,8 @@ static void FreeGfx(void)
 	}
 #endif
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	gfx_ControlBlanker(My_Screen, TRUE);
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	gfx_Stop(My_Window);
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-	Delay(1);
 
 	MutexObtain( window_mx );
 	// if screen : close Window thn screen
@@ -777,8 +756,6 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	{
 		CloseWindow(My_Window);
 		My_Window=NULL;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 #ifdef CONFIG_GUI
 		if(use_gui)
@@ -798,8 +775,6 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		My_Screen = NULL;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (My_Window) 
 	{
 		gfx_StopWindow(My_Window);
@@ -811,30 +786,26 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	MutexRelease(window_mx);
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (image_buffer_mem) {
 		FreeVec(image_buffer_mem);
 		image_buffer_mem = NULL;
 	}
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 }
 
 /******************************** UNINIT    ******************************************/
 static void uninit(void)
 {
 dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
+
 	FreeGfx();
-dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
+
 	if (EmptyPointer)
 	{
 	  FreeVec(EmptyPointer);
 	  EmptyPointer=NULL;
 	}
-dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
+
 	gfx_ReleaseArg();
-dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
 }
 
 /******************************** CONTROL ******************************************/
