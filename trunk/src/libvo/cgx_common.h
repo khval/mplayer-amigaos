@@ -66,6 +66,8 @@ void gfx_ControlBlanker(struct Screen * screen, ULONG enable);
 void gfx_BlankerState(void);
 void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable);
 
+void gfx_get_max_mode(int depth_bits, ULONG *mw,ULONG *mh);
+
 /******************************/
 
 /******************************/
