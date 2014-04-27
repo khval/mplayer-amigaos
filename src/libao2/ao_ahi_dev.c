@@ -35,9 +35,15 @@
 #include <hardware/byteswap.h>
 #endif
 
+
+struct Library 			 *AHIBase = NULL;
+struct AHIIFace		*IAHI = NULL;
+
 #ifdef __amigaos4__
-extern int SWAPLONG( int i );
-extern short SWAPWORD( short hi );
+
+#define SWAPLONG( i, o ) asm ( "lwarx %0,0,%1 \n"  :  "=r" (o) : "r" (&i), "r" (&i)  : "r0" );
+#define SWAPWORD( hi, ho ) asm ( "lhbrx %0,0,%1 \n"	:  "=r" (ho) : "r" (&hi), "r" (&hi)  : "r0" );
+
 #endif
 
 // End OS Specific
@@ -167,15 +173,20 @@ static void cleanup_task(void) {
 
    kk(KPrintF("Closing device\n");)
 
-   if (! AHIDevice )
-   {
-	if (link)
+	if ( IAHI ) DropInterface((struct Interface*)IAHI); IAHI = 0;
+
+	if (! AHIDevice )
 	{
-	  AbortIO( (struct IORequest *) link);
-	  WaitIO( (struct IORequest *) link);
+		if (link)
+		{
+			AbortIO( (struct IORequest *) link);
+			WaitIO( (struct IORequest *) link);
+		}
+
+		CloseDevice ( (struct IORequest *) AHIio_orig);
 	}
-	  CloseDevice ( (struct IORequest *) AHIio_orig);
-   }
+
+
 
    kk(KPrintF("Deleteting AHIio_orig\n");)
    if (AHIio_orig) DeleteIORequest( (struct IORequest *)AHIio_orig);
@@ -278,8 +289,6 @@ kk(KPrintF("TASK: sig_taskready: %d   sig_taskready %d\n", sig_taskready, sig_ta
    kk(KPrintF("TASK: Sends task ready signal to MainTask\n");)
    Signal( (struct Task *) MainTask, 1L << sig_taskready );
 
-	Printf("%s:%ld \n",__FUNCTION__,__LINE__);
-
 	kk(KPrintF("TASK: Starting main loop\n");)
 
 	for(;;)
@@ -333,8 +342,6 @@ kk(KPrintF("TASK: sig_taskready: %d   sig_taskready %d\n", sig_taskready, sig_ta
 			AHIio->ahir_Type = AHIType;
 		}
 
-Printf("%s:%ld... \n",__FUNCTION__,__LINE__);
-
 		buffer_get += buffer_to_play_len;
 		buffer_get %= AHI_CHUNKMAX;
 
@@ -345,8 +352,6 @@ Printf("%s:%ld... \n",__FUNCTION__,__LINE__);
 
 		buffer_full=FALSE;
 		written_byte -= buffer_to_play_len;    
-
-Printf("%s:%ld... \n",__FUNCTION__,__LINE__);
 
 		if (link)
 		{
@@ -363,16 +368,11 @@ Printf("%s:%ld... \n",__FUNCTION__,__LINE__);
 
 		link = AHIio;
 
-Printf("%s:%ld... \n",__FUNCTION__,__LINE__);
-
 		// Swap requests
 		tempRequest = AHIio;
 		AHIio  = AHIio2;
 		AHIio2 = tempRequest;
 	} 
-
-
-Printf("%s:%ld -- stoping... \n",__FUNCTION__,__LINE__);
 
 end_playertask:
 
@@ -508,8 +508,6 @@ static int ahi_dev_init(int rate,int channels,int format,int flags){
 
    MainTask = FindTask(NULL);
 
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
-
    kk(KPrintF("Creating Task\n");)
 
 #ifdef __morphos__
@@ -566,16 +564,12 @@ static int ahi_dev_init(int rate,int channels,int format,int flags){
 // close audio device
 static void ahi_dev_uninit(int immed)
 {
-	Printf("----- CLOSE AHI AUDIO -----\n");
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	kk(KPrintF("Uninit\n");)
 
 	// send signal for process to quit.
 
 	if (PlayerTask_Process)
 	{
-		Printf("%s:%ld -- %08xl\n",__FUNCTION__,__LINE__, &PlayerTask_Process->pr_Task);
 		Signal( &PlayerTask_Process->pr_Task, SIGBREAKF_CTRL_C );
 	}
 
@@ -585,9 +579,7 @@ static void ahi_dev_uninit(int immed)
    if (sig_taskend != -1) {
 	  if (PlayerTask_Process)
 	  {
-		Printf("----- WAIT FOR PlayerTask_Process() to quit -----\n");
 		Wait(SIGF_CHILD);
-//		 Wait(1L << sig_taskend ); // Wait for the PlayerTask to be finished before leaving !
 	  }
 	  FreeSignal ( sig_taskend );   
 	  sig_taskend=-1; 
@@ -596,7 +588,6 @@ static void ahi_dev_uninit(int immed)
 	  FreeSignal (sig_taskready );
 	  sig_taskready =-1;
    }
-	Printf("----- CLOSE AHI AUDIO - DONE -----\n");
 }
 
 /***************************** RESET **********************************/
@@ -654,6 +645,7 @@ static int play(void* data,int len,int flags){
    // This function just fill a buffer which is played by another task
    int data_to_put, data_put;   
    int i, imax;
+	LONG ltemp;	
 
 	KPrintF("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -710,7 +702,11 @@ static int play(void* data,int len,int flags){
 	   imax = data_to_put / 2;
 	   for (i = 0; i < imax; i++)
 	   {
-		 ((WORD *) (buffer + buffer_put))[i] = SWAPWORD(((UWORD *)data)[i]) - 32768;
+//		 ((WORD *) (buffer + buffer_put))[i] = SWAPWORD(((UWORD *)data)[i]) - 32768;
+
+ 		SWAPWORD(((UWORD *)data)[i], ((WORD *) (buffer + buffer_put))[i]);
+		((WORD *) (buffer + buffer_put))[i] -= 32768;
+
 	   }
 	   break;
 
@@ -718,7 +714,7 @@ static int play(void* data,int len,int flags){
 	   imax = data_to_put / 2;
 	   for (i = 0; i < imax; i++)
 	   {
-		 ((WORD *) (buffer + buffer_put))[i] = SWAPWORD(((WORD *)data)[i]);
+		 SWAPWORD(((WORD *)data)[i], ((WORD *) (buffer + buffer_put))[i]);
 	   }
 	   break;
 
@@ -738,7 +734,8 @@ static int play(void* data,int len,int flags){
 	   data_put = imax * 3;
 	   for (i = 0; i < imax; i++)
 	   {
-		 ((LONG *) (buffer + buffer_put))[i] = (LONG)(SWAPLONG(*((ULONG *)(((UBYTE *)data)+(i*3)))) << 8);
+		SWAPLONG( *((ULONG *)(((UBYTE *)data)+(i*3))), ltemp );
+		((LONG *) (buffer + buffer_put))[i] = ltemp << 8;
 	   }
 	   break;
 
@@ -746,7 +743,7 @@ static int play(void* data,int len,int flags){
 	   imax = data_to_put / 4;
 	   for (i = 0; i < imax; i++)
 	   {
-		 ((LONG *) (buffer + buffer_put))[i] = SWAPLONG(((LONG *)data)[i]);
+		 SWAPLONG(((LONG *)data)[i], ((LONG *) (buffer + buffer_put))[i] );
 	   }
 	   break;
    }
