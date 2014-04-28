@@ -479,6 +479,8 @@ void gfx_Stop(struct Window *My_Window)
 
 /***************************************************/
 
+int secs,secs2,mics,mics2;
+
 BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,
 	uint32_t *window_left, uint32_t *window_top )
 {
@@ -582,13 +584,39 @@ if(!use_gui)
 					switch(Code)
 					{
 						case SELECTDOWN:
-							mplayer_put_key(MOUSE_BTN0 | MP_KEY_DOWN);
-							break;
 
+//							mplayer_put_key(MOUSE_BTN0 | MP_KEY_DOWN);
+
+							if (!secs&&!mics)
+							{
+								secs=IntuiMsg->Seconds;
+								mics=IntuiMsg->Micros;
+								break; // no need to test double-click
+							}
+							else
+							{
+								secs2=IntuiMsg->Seconds;
+								mics2=IntuiMsg->Micros;
+							}
+
+							if ( DoubleClick(secs, mics, secs2, mics2) )
+							{
+                                				put_command0(MP_CMD_VO_FULLSCREEN);
+								secs = mics = secs2 = mics2 = 0;
+								p_secs1 = p_secs2 = p_mics2 = p_mics1 = 0;
+								mouse_hidden=FALSE;
+							}
+							else
+							{
+								secs = secs2;
+								mics = mics2;
+							}
+							break;
+/*
 						case SELECTUP:
 							mplayer_put_key(MOUSE_BTN0 );
 							break;
-
+*/
 						case MENUDOWN:
 							mplayer_put_key(MOUSE_BTN1 | MP_KEY_DOWN);
 							break;
@@ -904,7 +932,6 @@ void gfx_ControlBlanker(struct Screen * screen, ULONG enable)
 //				SetAttrs(screen, SA_StopBlanker, enable ? FALSE : TRUE, TAG_DONE);
 //#endif
 			}
-			Printf("%s:%ld\n",__FUNCTION__,__LINE__);
 		}
 	}
 }
