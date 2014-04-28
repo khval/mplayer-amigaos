@@ -112,6 +112,7 @@ static ULONG buffer_put=0; // Place where we have to put the buffer we will play
 
 static unsigned int written_byte=0;
 static BYTE *buffer=NULL;    // Our audio buffer
+static paused = FALSE;
 
 typedef enum
 {
@@ -294,6 +295,12 @@ kk(KPrintF("TASK: sig_taskready: %d   sig_taskready %d\n", sig_taskready, sig_ta
 	for(;;)
 	{
 		if ( (SetSignal(0, SIGBREAKF_CTRL_C ) & SIGBREAKF_CTRL_C ) == SIGBREAKF_CTRL_C ) break;
+
+		if (paused)
+		{
+			Delay(TICKS_PER_SECOND / 10);
+			continue;
+		}
 
 		ObtainSemaphore(&LockSemaphore); 
 		kk(KPrintF("TASK: Semaphore obtained\n");)
@@ -619,6 +626,7 @@ kk(KPrintF("RESET: END AbortIO\n");)
 // stop playing, keep buffers (for pause)
 static void audio_pause()
 {
+	paused = TRUE;
 //	  AHIio->ahir_Std.io_Command  = CMD_STOP;
 //	  DoIO( (struct IORequest *) AHIio);
 }
@@ -627,6 +635,7 @@ static void audio_pause()
 // resume playing, after audio_pause()
 static void audio_resume()
 {
+	paused = FALSE;
 //	 AHIio->ahir_Std.io_Command  = CMD_START;
 //	 DoIO( (struct IORequest *) AHIio);
 }
