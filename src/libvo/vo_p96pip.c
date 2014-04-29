@@ -66,6 +66,8 @@
 #include "vo_p96pip_gui.c"
 #endif
 
+#include "cgx_common.h"
+
 #define PUBLIC_SCREEN 0
 
 static vo_info_t info =
@@ -267,18 +269,7 @@ static ULONG Open_PIPWindow(void)
 			WA_Hidden,			FALSE, //this avoid a bug into WA_StayTop when used with WA_Hidden
 			WA_PubScreen,		My_Screen,
 //			WA_StayTop,         (is_ontop==1) ? TRUE : FALSE,
-			WA_IDCMP,			IDCMP_NEWSIZE |
-								IDCMP_MOUSEBUTTONS |
-								IDCMP_RAWKEY |
-								IDCMP_EXTENDEDMOUSE |
-								/* IDCMP_VANILLAKEY | */
-								IDCMP_CLOSEWINDOW |
-								IDCMP_MENUPICK |
-								IDCMP_MOUSEMOVE |
-								IDCMP_IDCMPUPDATE |
-								IDCMP_CHANGEWINDOW |
-								IDCMP_GADGETUP |
-								IDCMP_GADGETDOWN,
+			WA_IDCMP,			IDCMP_COMMON,
 					TAG_DONE);
 
 
@@ -320,7 +311,7 @@ static ULONG Open_PIPWindow(void)
 
 static ULONG GoFullScreen(void)
 {
-	uint32_t left = 0, top = 0;
+	ULONG left = 0, top = 0;
     ULONG ModeID = INVALID_ID;
 	ULONG out_width = 0;
 	ULONG out_height = 0;
@@ -355,17 +346,15 @@ static ULONG GoFullScreen(void)
 	/* calculate new video size/aspect */
 	aspect_save_screenres(My_Screen->Width,My_Screen->Height);
 
-//   	aspect(&out_width,&out_height,A_ZOOM);
+	out_width = image_width;
+	out_height = image_height;
 
-	out_width =My_Screen->Width;
-	out_height = My_Screen->Height;
-	
+   	aspect(&out_width,&out_height,A_ZOOM);
 
+	left=(My_Screen->Width-out_width)/2;
+	top=(My_Screen->Height-out_height)/2;
 
-    left=(My_Screen->Width-out_width)/2;
-    top=(My_Screen->Height-out_height)/2;
-
-    My_Window = p96PIP_OpenTags(
+	My_Window = p96PIP_OpenTags(
                       	P96PIP_SourceFormat, RGBFB_YUV422CGX,
                       	P96PIP_SourceWidth,  image_width,
                       	P96PIP_SourceHeight, image_height,
@@ -385,7 +374,7 @@ static ULONG GoFullScreen(void)
                       	WA_StayTop,		  	TRUE,
 						WA_DropShadows,		FALSE,
                       	WA_Flags,		WFLG_RMBTRAP,
-                      	WA_IDCMP,		IDCMP_MOUSEBUTTONS | IDCMP_MOUSEMOVE |	IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE, 
+                      	WA_IDCMP,		IDCMP_COMMON, 
 
                       	TAG_DONE);
 

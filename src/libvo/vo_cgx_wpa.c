@@ -43,10 +43,7 @@
 #define kk(x)
 #define dprintf(...)
 
-// OS specific
-//#include <libraries/cybergraphics.h>
-//#include <proto/cybergraphics.h>
-//#include <proto/graphics.h>
+#include <proto/Picasso96API.h>
 
 #include <proto/cybergraphics.h>
 #include <cybergraphx/cybergraphics.h>
@@ -228,37 +225,28 @@ static ULONG Open_Window()
 	{
 		struct DrawInfo *dri;
 		
-		dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 		ModeID = GetVPModeID(&My_Screen->ViewPort);
-
-		dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 		if ( (dri = GetScreenDrawInfo(My_Screen) ) ) 
 		{
-			ULONG bw, bh;
-
-#ifdef __amigaos4__
-
-	 bw =0; bh=0;
-
-#else
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+			ULONG bw=0, bh=0;
 
 			switch(gfx_BorderMode)
 			{
 				case NOBORDER:
 						bw = 0;
 						bh = 0;
-					break;
-
+						break;
+#ifdef __amigaos4__
 				default:
-						bw = GetSkinInfoAttrA(dri, SI_BorderLeft, NULL) +
-				     	GetSkinInfoAttrA(dri, SI_BorderRight, NULL);
-
-						bh = GetSkinInfoAttrA(dri, SI_BorderTopTitle, NULL) +
-				     	GetSkinInfoAttrA(dri, SI_BorderBottom, NULL);
+						bw = My_Screen->WBorLeft + My_Screen->WBorRight;
+						bh = My_Screen->WBorTop + My_Screen->Font->ta_YSize + 1 + My_Screen->WBorBottom;
+#endif
+#ifdef __morphos__
+				default:
+						bw = GetSkinInfoAttrA(dri, SI_BorderLeft, NULL) + GetSkinInfoAttrA(dri, SI_BorderRight, NULL);
+						bh = GetSkinInfoAttrA(dri, SI_BorderTopTitle, NULL) + GetSkinInfoAttrA(dri, SI_BorderBottom, NULL);
+#endif
 			}
 
 			if (FirstTime)
@@ -267,20 +255,14 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 				win_top  = (My_Screen->Height - (window_height + bh)) / 2;
 				FirstTime = FALSE;
 			}
-#endif
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 #ifdef CONFIG_GUI
-		    if (use_gui)
-				WindowActivate = FALSE;
+		    if (use_gui)	WindowActivate = FALSE;
 #endif
 			
 			switch(gfx_BorderMode)
 			{
 				case NOBORDER:
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 					My_Window = OpenWindowTags( NULL,
 						WA_CustomScreen,    (ULONG) My_Screen,
@@ -295,15 +277,13 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 						WA_Borderless,      TRUE,
 						WA_SizeGadget,      FALSE,
 						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
+						WA_IDCMP,           IDCMP_COMMON,
 						WA_Flags,           WFLG_REPORTMOUSE,
 						//WA_SkinInfo,				NULL,
 					TAG_DONE);
 					break;
 
 				case TINYBORDER:
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 					My_Window = OpenWindowTags( NULL,
 						WA_CustomScreen,    (ULONG) My_Screen,
@@ -318,15 +298,13 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 						WA_Borderless,      FALSE,
 						WA_SizeGadget,      FALSE,
 						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
+						WA_IDCMP,           IDCMP_COMMON,
 						WA_Flags,           WFLG_REPORTMOUSE,
 						//WA_SkinInfo,				NULL,
 					TAG_DONE);	
 					break;
 
 				default:
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 					My_Window = OpenWindowTags( NULL,
 						WA_CustomScreen,    (ULONG) My_Screen,
@@ -348,8 +326,9 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 						WA_DragBar,         TRUE,
 						WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
 						WA_SizeGadget,      FALSE,
+						WA_SizeBBottom,	TRUE,
 						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE,
+						WA_IDCMP,           IDCMP_COMMON,
 						WA_Flags,           WFLG_REPORTMOUSE,
 						//WA_SkinInfo,        NULL,
 					TAG_DONE);
@@ -406,6 +385,7 @@ static ULONG Open_FullScreen()
 	struct DimensionInfo buffer_Dimmension;
 	ULONG depth;
 	ULONG ModeID;
+	ULONG max_width,max_height;
 
 	if(WantedModeID)
 	{
@@ -535,17 +515,17 @@ printf("screen_width=%d screen_height=%d image_width=%d image_height=%d %x\n",sc
 			WA_CustomScreen,  (ULONG) My_Screen,
 #endif
 			WA_PubScreen,       (ULONG) My_Screen,
-		    WA_Top,             0,
-		    WA_Left,            0,
-		    WA_Height,          screen_height,
-		    WA_Width,           screen_width,
-		    WA_SimpleRefresh,   TRUE,
-		    WA_CloseGadget,     FALSE,
-		    WA_DragBar,         TRUE,
+			WA_Top,             0,
+			WA_Left,            0,
+			WA_Height,          screen_height,
+			WA_Width,           screen_width,
+			WA_SimpleRefresh,   TRUE,
+			WA_CloseGadget,     FALSE,
+			WA_DragBar,         TRUE,
 			WA_Borderless,      TRUE,
 			WA_Backdrop,        TRUE,
-		    WA_Activate,        TRUE,
-			WA_IDCMP,           IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_REFRESHWINDOW | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW,
+			WA_Activate,        TRUE,
+			WA_IDCMP,           IDCMP_COMMON,
 			WA_Flags,           WFLG_REPORTMOUSE,
 		TAG_DONE);
 
