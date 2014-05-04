@@ -8,8 +8,6 @@
 
 #define USE_VMEM64	1
 
-#define ALL_REACTION_CLASSES
-#define ALL_REACTION_MACROS
 
 #include <reaction/reaction.h>
 #include <reaction/reaction_macros.h>
@@ -62,10 +60,6 @@
 #include <assert.h>
 #undef CONFIG_GUI
 
-#ifdef CONFIG_GUI
-#include "vo_p96pip_gui.c"
-#endif
-
 #include "cgx_common.h"
 
 #define PUBLIC_SCREEN 0
@@ -94,8 +88,9 @@ static void FreeGfx(void);
 struct Screen *My_Screen;
 struct Window *My_Window;
 
-ULONG image_width;
-ULONG image_height;
+extern uint32 amiga_image_width;
+extern uint32 amiga_image_height;
+
 ULONG window_width = 0;
 ULONG window_height =0;
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
@@ -121,7 +116,7 @@ BOOL keep_width = FALSE;
 BOOL keep_height = FALSE;
 BOOL is_ontop= TRUE;
 
-ULONG image_format;
+ULONG amiga_image_format;
 
 float ratio;
 
@@ -131,6 +126,8 @@ struct MsgPort *UserMsg;
 extern APTR window_mx;
 
 struct Window *open_pip_window(BOOL is_full_screen, int width, int height);
+
+static int numbuffers=3;
 
 /******************************** DRAW ALPHA ******************************************/
 
@@ -146,14 +143,11 @@ static void draw_alpha_yv12(int x0, int y0, int w, int h, unsigned char* src, un
 	struct BitMap *bm;
     struct RenderInfo ri;
     int lock_h;
-    int numbuffers=0;
 
 	if (!w || !h)
 		return;
 
-    	p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm   ,
-    								P96PIP_NumberOfBuffers, &numbuffers  ,
-    								TAG_END, TAG_DONE );
+    	p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm ,  TAG_DONE );
 
     if (! (lock_h = p96LockBitMap(bm, (uint8 *)&ri, sizeof(struct RenderInfo))))
     {
@@ -161,7 +155,7 @@ static void draw_alpha_yv12(int x0, int y0, int w, int h, unsigned char* src, un
         return;
     }
 
-    dstbase = (UWORD *)(ri.Memory + ( ( (y0 * image_width) + x0) * 2));
+    dstbase = (UWORD *)(ri.Memory + ( ( (y0 * amiga_image_width) + x0) * 2));
 
     do
     {
@@ -184,26 +178,9 @@ static void draw_alpha_yv12(int x0, int y0, int w, int h, unsigned char* src, un
 
         src     +=   stride;
         srca    +=   stride;
-        dstbase +=   image_width;
+        dstbase +=   amiga_image_width;
 
     } while (--h);
-
-	if (numbuffers>1)
-	{
-		uint32 WorkBuf, DispBuf, NextWorkBuf;
-
-		p96PIP_GetTags(My_Window,	P96PIP_WorkBuffer,      &WorkBuf,
-								 		P96PIP_DisplayedBuffer, &DispBuf,
-								 		TAG_END, TAG_DONE );
-
-		NextWorkBuf = (WorkBuf+1) % numbuffers;
-
-		if (NextWorkBuf == DispBuf) WaitTOF();
-
-		p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf, //P96PIP_WorkBuffer, WorkBuf,
-								 		P96PIP_WorkBuffer,    NextWorkBuf, //P96PIP_DisplayedBuffer, NextWorkBuf,
-								 		TAG_END, TAG_DONE);
-	}
 
 	p96UnlockBitMap(bm, lock_h);
 }
@@ -233,10 +210,10 @@ static ULONG Open_PIPWindow(void)
 
 	My_Window = p96PIP_OpenTags(
 			P96PIP_SourceFormat, 	RGBFB_YUV422CGX,
-			P96PIP_SourceWidth,		image_width,
-			P96PIP_SourceHeight,	image_height,
+			P96PIP_SourceWidth,		amiga_image_width,
+			P96PIP_SourceHeight,	amiga_image_height,
 			P96PIP_AllowCropping,	TRUE,
-//			P96PIP_NumberOfBuffers, NUMBUFFERS,
+			P96PIP_NumberOfBuffers, numbuffers,
 			P96PIP_Relativity, PIPRel_Width | PIPRel_Height,
 
 #ifdef CONFIG_GUI
@@ -299,8 +276,8 @@ static ULONG Open_PIPWindow(void)
 	mouse_hidden = FALSE;
 	ClearPointer(My_Window);
 
-	vo_dwidth = image_width;
-	vo_dheight = image_height;
+	vo_dwidth = amiga_image_width;
+	vo_dheight = amiga_image_height;
 
 	is_fullscreen = 0;
 
@@ -346,8 +323,8 @@ static ULONG GoFullScreen(void)
 	/* calculate new video size/aspect */
 	aspect_save_screenres(My_Screen->Width,My_Screen->Height);
 
-	out_width = image_width;
-	out_height = image_height;
+	out_width = amiga_image_width;
+	out_height = amiga_image_height;
 
    	aspect(&out_width,&out_height,A_ZOOM);
 
@@ -356,9 +333,9 @@ static ULONG GoFullScreen(void)
 
 	My_Window = p96PIP_OpenTags(
                       	P96PIP_SourceFormat, RGBFB_YUV422CGX,
-                      	P96PIP_SourceWidth,  image_width,
-                      	P96PIP_SourceHeight, image_height,
-						P96PIP_NumberOfBuffers, 1,
+                      	P96PIP_SourceWidth,  amiga_image_width,
+                      	P96PIP_SourceHeight, amiga_image_height,
+						P96PIP_NumberOfBuffers, numbuffers,
 
                       	WA_CustomScreen,    (ULONG) My_Screen,
                       	WA_ScreenTitle,     (ULONG) "MPlayer ",
@@ -464,18 +441,14 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		keep_height    = d_height;
     }
 
-	image_width = width;
-	image_height = height;
-    image_format = format;
+	amiga_image_width = width;
+	amiga_image_height = height;
+    amiga_image_format = format;
 
     is_fullscreen = flags & VOFLAG_FULLSCREEN;
 
 	window_width  = d_width;
 	window_height = d_height;
-
-    //printf("\nconfig: image_width:%d, image_height:%d\nwidth: %d, height: %d\nd_width: %d, d_height:%d",image_width, image_height, width, height, d_width, d_height);
-    //printf("\nconfig: old_d_width:%d, old_d_height:%d\nkeep_width: %d, keep_height: %d",old_d_width, old_d_height, keep_width, keep_height);
-    //printf("\nconfig: window_width:%d, window_height:%d\n",window_width, window_height);
 
 	EmptyPointer = AllocVec(12, MEMF_PUBLIC | MEMF_CLEAR);
 
@@ -693,7 +666,6 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 	struct BitMap *bm = NULL;
 	int lock_h;
 	unsigned int w3, _w2;
-	int numbuffers=0;
 
 	MutexObtain( window_mx );
 	if (!My_Window) 
@@ -705,9 +677,7 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 /*
     w -= (w%8);
 */
-    p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm   ,
-    								P96PIP_NumberOfBuffers, &numbuffers  ,
-    								TAG_END, TAG_DONE );
+    p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm, TAG_DONE );
 
     if (! (lock_h = p96LockBitMap(bm, (uint8 *)&ri, sizeof(struct RenderInfo))))
     {
@@ -730,7 +700,7 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
         _pu = pu = (ULONG *) image[1];
         _pv = pv = (ULONG *) image[2];
 
-        srcdata = (ULONG *) ((uint32)ri.Memory + ( ( (y * image_width) + x) * 2));
+        srcdata = (ULONG *) ((uint32)ri.Memory + ( ( (y * amiga_image_width) + x) * 2));
 
         // The data must be stored like this:
         // YYYYYYYY UUUUUUUU : pixel 0
@@ -835,22 +805,6 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
         }
     }
 
-	if (numbuffers>1)
-	{
-		uint32 WorkBuf, DispBuf, NextWorkBuf;
-
-		p96PIP_GetTags(My_Window,	P96PIP_WorkBuffer, &WorkBuf,
-								P96PIP_DisplayedBuffer, &DispBuf,
-								TAG_END, TAG_DONE );
-
-		NextWorkBuf = (WorkBuf+1) % numbuffers;
-
-		if (NextWorkBuf == DispBuf) WaitTOF();
-
-		p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf,
-						 		P96PIP_WorkBuffer,    NextWorkBuf,
-						 		TAG_END, TAG_DONE );
-	}
 
 	p96UnlockBitMap(bm, lock_h);
 
@@ -862,18 +816,46 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 
 static void draw_osd(void)
 {
-    vo_draw_text(image_width, image_height, vo_draw_alpha_func);
+    vo_draw_text(amiga_image_width, amiga_image_height, vo_draw_alpha_func);
 }
 /******************************** FLIP_PAGE ******************************************/
 static void flip_page(void)
 {
+
+	struct RenderInfo ri;
+	struct BitMap *bm;
+	ULONG lock_h;
+	uint32 WorkBuf, DispBuf, NextWorkBuf;
+
+	if (numbuffers>1)
+	{
+//		p96PIP_GetTags(My_Window, P96PIP_SourceBitMap   , (ULONG)&bm ,  TAG_DONE );
+
+//		if ( (lock_h = p96LockBitMap(bm, (uint8 *)&ri, sizeof(struct RenderInfo))))
+//	   	{
+			p96PIP_GetTags(My_Window,	P96PIP_WorkBuffer, &WorkBuf,
+								P96PIP_DisplayedBuffer, &DispBuf,
+								TAG_END, TAG_DONE );
+
+			NextWorkBuf = (WorkBuf+1) % numbuffers;
+
+			if (NextWorkBuf == DispBuf) WaitTOF();
+
+			p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf,
+						 		P96PIP_WorkBuffer,    NextWorkBuf,
+						 		TAG_END, TAG_DONE );
+
+//			p96UnlockBitMap(bm, lock_h);
+//		}
+	}
+
    /* nothing */
 }
 /******************************** DRAW_FRAME ******************************************/
 static int draw_frame(uint8_t *src[])
 {
-    // Nothing
-    return -1;
+	// Nothing
+	return -1;
 }
 
 /************************************************************************************/
@@ -925,7 +907,7 @@ static int control(uint32_t request, void *data, ...)
 			is_fullscreen = !is_fullscreen;
 
 			FreeGfx(); // Free/Close all gfx stuff (screen windows, buffer...);
-			if ( config(image_width, image_height, window_width, window_height, is_fullscreen, NULL, image_format) < 0) return VO_FALSE;
+			if ( config(amiga_image_width, amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;
 
             return VO_TRUE;
 		break;
@@ -934,7 +916,7 @@ static int control(uint32_t request, void *data, ...)
         	is_ontop = !is_ontop;
         	
 			FreeGfx(); // Free/Close all gfx stuff (screen windows, buffer...);
-			if ( config(image_width, image_height, window_width, window_height, FALSE, NULL, image_format) < 0) return VO_FALSE;
+			if ( config(amiga_image_width, amiga_image_height, window_width, window_height, FALSE, NULL, amiga_image_format) < 0) return VO_FALSE;
             return VO_TRUE;
 		break;
 		case VOCTRL_UPDATE_SCREENINFO:
