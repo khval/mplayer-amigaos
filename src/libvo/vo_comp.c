@@ -149,28 +149,28 @@ extern char PubScreenName[128];
 
 // not OS specific
 
-static uint32_t   org_image_width;            // well no comment
-static uint32_t   org_image_height;
+static uint32_t   org_amiga_image_width;            // well no comment
+static uint32_t   org_amiga_image_height;
 
-static uint32_t   image_width;            // well no comment
-static uint32_t   image_height;
+extern uint32_t   amiga_image_width;            // well no comment
+extern uint32_t   amiga_image_height;
 
 static uint32_t   window_width;           // width and height on the window
 static uint32_t   window_height;          // can be different from the image
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
 
-uint32_t	is_fullscreen;
+extern uint32_t is_fullscreen;
 BOOL	is_paused = FALSE;
 
 extern UWORD *EmptyPointer;               // Blank pointer
 extern ULONG WantedModeID;
 
-static uint32_t   image_bpp;            	// image bpp
+static uint32_t   amiga_image_bpp;            	// image bpp
 static uint32_t   offset_x;               	// offset in the rp where we have to display the image
 static uint32_t   offset_y;               	// ...
 
-static uint32_t		image_format;
+static uint32_t		amiga_image_format;
 
 static uint32_t   win_left;             
 static uint32_t   win_top;              
@@ -187,7 +187,7 @@ struct BackFillArgs
 };
 
 struct BitMop *the_bitmap = NULL;
-char *image_buffer = NULL;
+char *amiga_image_buffer = NULL;
 
 
 
@@ -240,7 +240,7 @@ static void draw_inside_window()
 
 	if (inner_bitmap)
 	{
-		draw_comp_bitmap(the_bitmap, inner_bitmap, image_width, image_height,0,0,ww,wh);
+		draw_comp_bitmap(the_bitmap, inner_bitmap, amiga_image_width, amiga_image_height,0,0,ww,wh);
 
 		BltBitMapRastPort(inner_bitmap, 0, 0, My_Window -> RPort,
 			My_Window -> BorderLeft,
@@ -267,9 +267,9 @@ static void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs)
 	if (bitmap)
 	{
 		rp.BitMap = the_bitmap;
-		WritePixelArray(image_buffer,0,0,image_width*image_bpp,	&rp,0,0,image_width,image_height,RECTFMT_ARGB);
+		WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	&rp,0,0,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
 
-		draw_comp_bitmap(the_bitmap, bitmap, image_width, image_height,	0,0,ww,wh);
+		draw_comp_bitmap(the_bitmap, bitmap, amiga_image_width, amiga_image_height,	0,0,ww,wh);
 
 		BltBitMapRastPort(bitmap, 0, 0, My_Window -> RPort,
 			My_Window -> BorderLeft + My_Window -> LeftEdge,
@@ -308,7 +308,7 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 
 	vo_draw_alpha_rgb32(w,h,src,srca,
 			stride,
-			(UBYTE *) ( (ULONG) image_buffer + (y0*image_width*image_bpp)+(x0*image_bpp) ), image_width*image_bpp );
+			(UBYTE *) ( (ULONG) amiga_image_buffer + (y0*amiga_image_width*amiga_image_bpp)+(x0*amiga_image_bpp) ), amiga_image_width*amiga_image_bpp );
 }
 
 
@@ -444,8 +444,8 @@ static ULONG Open_Window()
 						WA_InnerWidth,      window_width,
 						WA_InnerHeight,     window_height,
 
-						WA_MinWidth, 		image_width/3,
-						WA_MinHeight,		image_height/3,
+						WA_MinWidth, 		amiga_image_width/3,
+						WA_MinHeight,		amiga_image_height/3,
 						WA_MaxWidth, 		My_Screen -> Width,
 						WA_MaxHeight,		My_Screen -> Height,
 						WA_SimpleRefresh,		TRUE,
@@ -468,8 +468,8 @@ static ULONG Open_Window()
 		vo_screenwidth = My_Screen->Width;
 		vo_screenheight = My_Screen->Height;
 
-		vo_dwidth = image_width;
-		vo_dheight = image_height;
+		vo_dwidth = amiga_image_width;
+		vo_dheight = amiga_image_height;
 
 /*
 		vo_dwidth = My_Window->Width;
@@ -551,8 +551,8 @@ static ULONG Open_FullScreen()
 
 	depth = ( FALSE ) ? 16 : GetCyberIDAttr( CYBRIDATTR_DEPTH , ModeID);
 
-	screen_width=image_width;
-	screen_height=image_height;
+	screen_width=amiga_image_width;
+	screen_height=amiga_image_height;
 
 	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -566,8 +566,8 @@ static ULONG Open_FullScreen()
 						P96BIDTAG_NominalHeight, screen_height,
 						TAG_DONE);
 
-			Printf("screen_width=%ld screen_height=%ld image_width=%ld image_height=%ld %lx\n",
-				screen_width,screen_height,image_width,image_height,ModeID);
+			Printf("screen_width=%ld screen_height=%ld amiga_image_width=%ld amiga_image_height=%ld %lx\n",
+				screen_width,screen_height,amiga_image_width,amiga_image_height,ModeID);
 
 			if ( ModeID == INVALID_ID ) 
 			{
@@ -586,8 +586,8 @@ static ULONG Open_FullScreen()
 		         				buffer_Dimmension.Nominal.MaxX,buffer_Dimmension.Nominal.MinX,
 							buffer_Dimmension.Nominal.MaxY,buffer_Dimmension.Nominal.MinY);
 
-					if (buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1 >= image_width &&
-						     buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1 >= image_height ) 
+					if (buffer_Dimmension.Nominal.MaxX - buffer_Dimmension.Nominal.MinX + 1 >= amiga_image_width &&
+						     buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1 >= amiga_image_height ) 
 					{
 						break;
 					}
@@ -657,8 +657,8 @@ static ULONG Open_FullScreen()
 	/* calculate new video size/aspect */
 	aspect_save_screenres(My_Screen->Width,My_Screen->Height);
 
-	out_width = image_width;
-	out_height = image_height;
+	out_width = amiga_image_width;
+	out_height = amiga_image_height;
 
    	aspect(&out_width,&out_height,A_ZOOM);
 
@@ -696,13 +696,21 @@ static ULONG Open_FullScreen()
 		return INVALID_ID;
 	}
 
+
+    SetWindowAttrs(My_Window,
+                               WA_Left,left,
+                               WA_Top,top,
+                               WA_Width,out_width,
+                               WA_Height,out_height,
+                               TAG_DONE);
+
 	FillPixelArray( My_Window->RPort, 0,0, screen_width, screen_height, 0x00000000);
 
 	vo_screenwidth = My_Screen->Width;
 	vo_screenheight = My_Screen->Height;
 
-	vo_dwidth = image_width;
-	vo_dheight = image_height;
+	vo_dwidth = amiga_image_width;
+	vo_dheight = amiga_image_height;
 	
 	vo_fs = 1;
 
@@ -715,7 +723,7 @@ static ULONG Open_FullScreen()
 
 static int PrepareBuffer(uint32_t in_format, uint32_t out_format)
 {
-	swsContext= sws_getContextFromCmdLine(image_width, image_height, in_format, image_width, image_height, out_format );
+	swsContext= sws_getContextFromCmdLine(amiga_image_width, amiga_image_height, in_format, amiga_image_width, amiga_image_height, out_format );
 
 	if (!swsContext)
 	{
@@ -729,7 +737,7 @@ static int PrepareBuffer(uint32_t in_format, uint32_t out_format)
 
 /******************************** CONFIG ******************************************/
 static int config(uint32_t width, uint32_t height, uint32_t d_width,
-		     uint32_t d_height, uint32_t fullscreen, char *title,
+		     uint32_t d_height, uint32_t flags, char *title,
 		     uint32_t in_format)
 {
 	ULONG ModeID = INVALID_ID;
@@ -738,26 +746,26 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 
 	if (My_Window) return 0;
 
-	is_fullscreen = fullscreen;
+	is_fullscreen = flags & VOFLAG_FULLSCREEN;
 	is_paused = FALSE;
 
-	image_format = in_format;
+	amiga_image_format = in_format;
 
 	// backup info
-	image_bpp = 4;
+	amiga_image_bpp = 4;
 
-	org_image_width = width;
-	org_image_height =height;
+	org_amiga_image_width = width;
+	org_amiga_image_height =height;
 
-	image_width = width & -16;
-	image_height = height ;
+	amiga_image_width = width & -16;
+	amiga_image_height = height ;
 
 	window_width = d_width & -16;
 	window_height = d_height;
 
 	MutexObtain( window_mx );
 	
-		if ( fullscreen )
+		if ( is_fullscreen )
 		{
 			dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
  			ModeID = Open_FullScreen();
@@ -774,8 +782,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 			FreeBitMap(the_bitmap);
 		}
 
-		the_bitmap = AllocBitMap( image_width , image_height, 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
-		image_buffer = AllocVec( (org_image_width * 4) * (org_image_height+2) , MEMF_CLEAR);
+		the_bitmap = AllocBitMap( amiga_image_width , amiga_image_height, 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
+		amiga_image_buffer = AllocVec( (org_amiga_image_width * 4) * (org_amiga_image_height+2) , MEMF_CLEAR);
 
 		rp = My_Window->RPort;
 
@@ -832,11 +840,11 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 
 	MutexObtain( window_mx );
 
-	dstStride[0] = image_width*image_bpp;
+	dstStride[0] = amiga_image_width*amiga_image_bpp;
 	dstStride[1] = 0;
 	dstStride[2] = 0;
 
-	dst[0] = (uint8_t *) ( (ULONG) image_buffer +x*image_bpp) ;
+	dst[0] = (uint8_t *) ( (ULONG) amiga_image_buffer +x*amiga_image_bpp) ;
 	dst[1] = NULL;
 	dst[2] = NULL; 
 
@@ -856,7 +864,7 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 
 static void draw_osd(void)
 {
-	vo_draw_text(image_width,image_height,vo_draw_alpha_func);
+	vo_draw_text(amiga_image_width,amiga_image_height,vo_draw_alpha_func);
 }
 
 /******************************** FLIP_PAGE ******************************************/
@@ -870,19 +878,19 @@ static void flip_page(void)
 		ww = My_Window->Width - My_Window->BorderLeft - My_Window->BorderRight;
 		wh = My_Window->Height - My_Window->BorderTop - My_Window->BorderBottom;
 	
-		if ((ww==image_width)&&(wh==image_height))	// no scaling so we dump it into the window.
+		if ((ww==amiga_image_width)&&(wh==amiga_image_height))	// no scaling so we dump it into the window.
 		{
-			WritePixelArray(image_buffer,0,0,image_width*image_bpp,	My_Window -> RPort,My_Window->BorderLeft,My_Window->BorderTop,image_width,image_height,RECTFMT_ARGB);
+			WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	My_Window -> RPort,My_Window->BorderLeft,My_Window->BorderTop,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
 		}
 		else
 		{
 			InitRastPort(&rp);
 			rp.BitMap = the_bitmap;
-			WritePixelArray(image_buffer,0,0,image_width*image_bpp,	&rp,0,0,image_width,image_height,RECTFMT_ARGB);
+			WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	&rp,0,0,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
 
 			if (is_fullscreen)	// do it fast
 			{
-				draw_comp( the_bitmap,My_Window, image_width,image_height);
+				draw_comp( the_bitmap,My_Window, amiga_image_width,amiga_image_height);
 			}
 			else				// try not to trash graphics.
 			{
@@ -957,10 +965,10 @@ static void FreeGfx(void)
 	rp = NULL;
 
 	if (the_bitmap) { FreeBitMap(the_bitmap); 	the_bitmap = NULL; }
-	if (image_buffer)
+	if (amiga_image_buffer)
 	{
 		dprintf("%s:%ld -- Free image buffer here\n",__FUNCTION__,__LINE__);
-		FreeVec(image_buffer);	image_buffer = NULL;
+		FreeVec(amiga_image_buffer);	amiga_image_buffer = NULL;
 	}
 
 	if (inner_bitmap) { FreeBitMap(inner_bitmap);  inner_bitmap = NULL; }
@@ -999,9 +1007,9 @@ static int control(uint32_t request, void *data, ...)
 			return VO_TRUE;
 
 		case VOCTRL_FULLSCREEN:
-			is_fullscreen = !is_fullscreen;
+			is_fullscreen ^= VOFLAG_FULLSCREEN;
 			FreeGfx();
-			if ( config(org_image_width, org_image_height, window_width, window_height, is_fullscreen, NULL, image_format) < 0) return VO_FALSE;
+			if ( config(org_amiga_image_width, org_amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;
 			return VO_TRUE;
 
 		case VOCTRL_PAUSE:
