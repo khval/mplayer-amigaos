@@ -82,6 +82,11 @@ typedef struct ArexxHandle
   uint32_t sigmask; // This is public and should be used in the main loop's Wait().
 } ArexxHandle;
 
+
+void StartArexx();
+void StopArexx();
+
+
 // Input: Pointer to int to store an error code. Is optional and may be NULL
 // Returns: ArexxHandle, or NULL for failure
 ArexxHandle* InitArexx();

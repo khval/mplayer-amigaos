@@ -102,6 +102,72 @@ static struct ARexxCmd rxCommands[] =
      {NULL, 0, NULL, NULL, 0}
 };
 
+static struct Task    *MainTask = NULL;           // Pointer to the main task;
+struct Process *ARexx_Process = NULL;
+
+static void ArexxTask (void)
+{
+	ULONG sigs;
+
+	ArexxHandle *rxHandler = InitArexx();
+
+	for(;;)
+	{
+		Printf("Wait for signals\n");
+		sigs = Wait( SIGBREAKF_CTRL_C | rxHandler->sigmask );
+
+		if ( sigs & SIGBREAKF_CTRL_C ) break;
+
+		if (rxHandler)
+		{
+			if(sigs & rxHandler->sigmask)
+			{
+				IDoMethod(rxHandler->rxObject,AM_HANDLEEVENT);
+			}
+		}
+	}
+
+	Printf("Kill Arexx Handler\n");
+
+	if (rxHandler)
+	{
+		EndArexx(rxHandler); 
+	}
+
+	Printf("Done time to end ARexx child process\n");
+	Signal( (struct Task *) MainTask, SIGF_CHILD );
+}
+
+void StartArexx()
+{
+	APTR output = Open("CON:",MODE_READWRITE);	 
+
+	MainTask = FindTask(NULL);
+	ARexx_Process = CreateNewProcTags(
+				NP_Name, "MPlayer ARexx Process" ,
+				NP_Output, output,
+				NP_Entry, ArexxTask, 
+				NP_Priority, 0,        
+				NP_Child, TRUE,
+				TAG_END);
+}
+
+
+void StopArexx()
+{
+	if (ARexx_Process)
+	{
+		Printf("--Signal ARexx child process to quit--\n");
+		Signal( &ARexx_Process->pr_Task, SIGBREAKF_CTRL_C );
+		Printf("--wait for ARexx child process to quit--\n");
+		Wait(SIGF_CHILD);	
+		Delay(1);				// I just wait and hope it has quit.
+		Printf("--ARexx child process has quit--\n");
+	}
+}
+
+
+
 ArexxHandle* InitArexx() 
 {
 	ArexxHandle *ro	= NULL;

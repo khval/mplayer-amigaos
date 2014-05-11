@@ -89,14 +89,11 @@ ULONG WantedModeID = 0;
 // Blank pointer
 UWORD *EmptyPointer = NULL;
 
-#include <mplayer-arexx.h>
 
-/* ARexx */
-extern struct ArexxHandle *rxHandler; 
-/* ARexx */
+uint32_t is_fullscreen;
+uint32_t amiga_image_width;
+uint32_t amiga_image_height;
 
-
-extern uint32_t is_fullscreen;
 char PubScreenName[128] = "";
 
 #define NOBORDER			0
@@ -496,22 +493,6 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 	}
 
 	info_sig=1L<<(My_Window->UserPort)->mp_SigBit;
-
-#ifdef CONFIG_GUI
-if(!use_gui)
-{
-#endif
-
-/* ARexx */
-    if(SetSignal(0L,rxHandler->sigmask) & rxHandler->sigmask)
-    {
-        IDoMethod(rxHandler->rxObject,AM_HANDLEEVENT);
-    }
-/* ARexx */
-
-#ifdef CONFIG_GUI
-}
-#endif
 
 	if (is_fullscreen && !mouse_hidden)
 	{
