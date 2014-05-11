@@ -135,6 +135,8 @@ extern const vo_functions_t video_out_corevideo;
 extern const vo_functions_t video_out_quartz;
 extern const vo_functions_t video_out_pnm;
 extern const vo_functions_t video_out_md5sum;
+extern const vo_functions_t video_out_comp;
+extern const vo_functions_t video_out_cgx_wpa;
 extern const vo_functions_t video_out_p96;
 extern const vo_functions_t video_out_p96_pip;
 
@@ -150,6 +152,10 @@ extern vo_functions_t video_out_xvidix;
 
 const vo_functions_t* const video_out_drivers[] =
 {
+#ifdef CONFIG_CGX_WPA
+		&video_out_comp,
+ 		&video_out_cgx_wpa,
+#endif
 #ifdef CONFIG_P96
  		&video_out_p96,
 #endif
