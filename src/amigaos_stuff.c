@@ -60,6 +60,8 @@ const char STACK[] __attribute((used))   = "$STACK: 5000000";
 extern char *SCREENSHOTDIR;
 char *EXTPATTERN = "(#?.avi|#?.mpg|#?.mpeg|#?.asf|#?.wmv|#?.vob|#?.rm|#?.mov|#?.mp3|#?.ogg|#?.wav|#?.wmv|#?.wma|#?.flv|#?.asf|#?.mp4)";
 
+static unsigned char ApplicationName[100];
+
 
 int SWAPLONG( int i )
 {
@@ -133,10 +135,6 @@ struct TimeRequest 		 *TimerRequest = NULL;
 struct MsgPort 	   		 *TimerMsgPort = NULL;
 
 struct MsgPort   		 *AppPort = NULL;
-
-/* ARexx */
-struct ArexxHandle 		 *rxHandler = NULL;
-/* ARexx */
 
 static char **AmigaOS_argv = NULL;
 static int AmigaOS_argc = 0;
@@ -385,16 +383,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	if (DIcon)		FreeDiskObject(DIcon);
 #endif
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-	if (IARexx)		// if Arexx lib is open.
-	{
-		if (NULL != rxHandler) EndArexx(rxHandler);
-	}
-
-/* ARexx */
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+	StopArexx();
 
 	if (AppID>0)
 	{
@@ -504,6 +493,7 @@ BOOL open_lib( const char *name, int ver , const char *iname, int iver, struct L
 int AmigaOS_Open(int argc, char *argv[])
 {
 	AmigaOS_argv 					= NULL;
+	int cnt;
 
 	//Remove requesters
 	//OldPtr = SetProcWindow((APTR) -1L);
@@ -584,15 +574,24 @@ int AmigaOS_Open(int argc, char *argv[])
 #endif
 
 	//Register the application so the ScreenBlanker don't bother us..
-	AppID = RegisterApplication((unsigned char*)"MPlayer",
+
+	cnt = 1;
+
+	do
+	{
+		sprintf(ApplicationName,"MPlayer.%d",cnt);
+		AppID = RegisterApplication((unsigned char*)ApplicationName,
 			REGAPP_URLIdentifier, 		"amigasoft.net",
-			REGAPP_LoadPrefs, 			TRUE,
-			REGAPP_SavePrefs, 			TRUE,
+			REGAPP_LoadPrefs, 			FALSE,
+			REGAPP_SavePrefs, 			FALSE,
 			REGAPP_ENVDir, 				"PROGDIR:",
 			REGAPP_NoIcon,				TRUE,
 			REGAPP_UniqueApplication, 	TRUE,
 			REGAPP_AllowsBlanker,		FALSE,
 			TAG_DONE);
+
+		cnt++;
+	} while (AppID == 0);
 
 	if (AppID == 0)
 	{
@@ -603,19 +602,9 @@ int AmigaOS_Open(int argc, char *argv[])
 	else
 	{
 		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
-		//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerDisallow);
 	}
 
-/* ARexx */
-
-	if ( ! ( rxHandler = InitArexx() ) )
-	{
-   		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Unable to open the arexx port (it requires arexx.class)\n");
-		AmigaOS_Close();
-		return -1;
-	}
-
-/* ARexx */
+	StartArexx();	
 
 	return 0;
 }
