@@ -96,7 +96,7 @@ ULONG window_height =0;
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
 
-uint32_t	 is_fullscreen;
+extern uint32_t is_fullscreen;
 
 ULONG win_top = 0;
 ULONG win_left = 0;
@@ -339,8 +339,6 @@ static ULONG GoFullScreen(void)
 
                       	WA_CustomScreen,    (ULONG) My_Screen,
                       	WA_ScreenTitle,     (ULONG) "MPlayer ",
-                      	WA_Left,            left,
-                      	WA_Top,             top,
                       	WA_SmartRefresh,    TRUE,
                       	WA_CloseGadget,     FALSE,
                       	WA_DepthGadget,     FALSE,
@@ -366,12 +364,12 @@ static ULONG GoFullScreen(void)
 	mouse_hidden = TRUE;
 	SetPointer(My_Window, EmptyPointer, 1, 16, 0, 0);
 
-    if ( (ModeID = GetVPModeID(&My_Window->WScreen->ViewPort) ) == INVALID_ID)
+	if ( (ModeID = GetVPModeID(&My_Window->WScreen->ViewPort) ) == INVALID_ID)
    	{
-        return INVALID_ID;
+		return INVALID_ID;
    	}
 
-    SetWindowAttrs(My_Window,
+	SetWindowAttrs(My_Window,
                                WA_Left,left,
                                WA_Top,top,
                                WA_Width,out_width,
@@ -384,9 +382,9 @@ static ULONG GoFullScreen(void)
 	vo_dheight = window_height;
 	vo_fs = 1;
 
-    ScreenToFront(My_Screen);
+	ScreenToFront(My_Screen);
 
-    return ModeID;
+	return ModeID;
 }
 
 static ULONG Open_FullScreen()
@@ -904,7 +902,7 @@ static int control(uint32_t request, void *data, ...)
             return VO_FALSE;
 		break;
         case VOCTRL_FULLSCREEN:
-			is_fullscreen = !is_fullscreen;
+			is_fullscreen ^= VOFLAG_FULLSCREEN;
 
 			FreeGfx(); // Free/Close all gfx stuff (screen windows, buffer...);
 			if ( config(amiga_image_width, amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;

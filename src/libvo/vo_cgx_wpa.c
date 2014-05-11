@@ -96,7 +96,7 @@ static uint32_t   window_height;          // can be different from the image
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
 
-uint32_t	 is_fullscreen;
+extern uint32_t	is_fullscreen;
 
 extern UWORD *EmptyPointer;               // Blank pointer
 extern ULONG WantedModeID;
@@ -579,14 +579,14 @@ static int PrepareBuffer(uint32_t in_format, uint32_t out_format)
 
 /******************************** CONFIG ******************************************/
 static int config(uint32_t width, uint32_t height, uint32_t d_width,
-		     uint32_t d_height, uint32_t fullscreen, char *title,
+		     uint32_t d_height, uint32_t flags, char *title,
 		     uint32_t in_format)
 {
 	ULONG ModeID = INVALID_ID;
 
 	if (My_Window) return 0;
 
-	is_fullscreen = fullscreen;
+	is_fullscreen = flags & VOFLAG_FULLSCREEN;
 	image_format = in_format;
 
 	// backup info
@@ -596,7 +596,7 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	window_width = d_width & -8;
 	window_height = d_height & -2;
 
-	if ( fullscreen )
+	if ( is_fullscreen )
 	{
 		dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
  		ModeID = Open_FullScreen();
@@ -797,7 +797,7 @@ static int control(uint32_t request, void *data, ...)
 			return VO_TRUE;
 
 		case VOCTRL_FULLSCREEN:
-			is_fullscreen = !is_fullscreen;
+			is_fullscreen ^= VOFLAG_FULLSCREEN;
 			FreeGfx();
 			if ( config(image_width, image_height, window_width, window_height, is_fullscreen, NULL, image_format) < 0) return VO_FALSE;
 			return VO_TRUE;
