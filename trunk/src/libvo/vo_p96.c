@@ -349,8 +349,8 @@ static ULONG Open_Window(void)
                         {
                             case NOBORDER:
 								My_Window = IIntuition->OpenWindowTags(NULL,
-									WA_Width, image_width,
-  									WA_Height, image_height,
+									WA_Width, amiga_image_width,
+  									WA_Height, amiga_image_height,
                                     WA_CustomScreen,    (ULONG) My_Screen,
                                     WA_ScreenTitle,     (ULONG) "MPlayer ",
                                     WA_Left,            old_d_posx,
@@ -377,8 +377,8 @@ static ULONG Open_Window(void)
 
                             case TINYBORDER:
 								My_Window = IIntuition->OpenWindowTags(NULL,
-									WA_Width, image_width,
-  									WA_Height, image_height,
+									WA_Width, amiga_image_width,
+  									WA_Height, amiga_image_height,
                                     WA_CustomScreen,    (ULONG) My_Screen,
                                     WA_ScreenTitle,     (ULONG) "MPlayer ",
                                     WA_Left,            old_d_posx,
@@ -405,8 +405,8 @@ static ULONG Open_Window(void)
 
                             default:
 								My_Window = IIntuition->OpenWindowTags(NULL,
-									WA_Width, image_width,
-  									WA_Height, image_height,
+									WA_Width, amiga_image_width,
+  									WA_Height, amiga_image_height,
 									WA_CustomScreen,	(ULONG) My_Screen,
 									WA_ScreenTitle,		(ULONG) "MPlayer",
 									WA_Title,			p96_GetWindowTitle(),
@@ -578,8 +578,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		keep_height    = d_height;
     }
 
-	image_width = width;
-	image_height = height;
+	amiga_image_width = width;
+	amiga_image_height = height;
     image_format = format;
 
     vo_fs = flags & VOFLAG_FULLSCREEN;
@@ -587,7 +587,7 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	window_width  = d_width;
 	window_height = d_height;
 
-    //printf("\nconfig: image_width:%d, image_height:%d\nwidth: %d, height: %d\nd_width: %d, d_height:%d",image_width, image_height, width, height, d_width, d_height);
+    //printf("\nconfig: amiga_image_width:%d, amiga_image_height:%d\nwidth: %d, height: %d\nd_width: %d, d_height:%d",amiga_image_width, amiga_image_height, width, height, d_width, d_height);
     //printf("\nconfig: old_d_width:%d, old_d_height:%d\nkeep_width: %d, keep_height: %d",old_d_width, old_d_height, keep_width, keep_height);
     //printf("\nconfig: window_width:%d, window_height:%d\n",window_width, window_height);
 
@@ -800,7 +800,7 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 
 static void draw_osd(void)
 {
-    vo_draw_text(image_width, image_height, vo_draw_alpha_func);
+    vo_draw_text(amiga_image_width, amiga_image_height, vo_draw_alpha_func);
 }
 /******************************** FLIP_PAGE ******************************************/
 static void flip_page(void)
@@ -879,7 +879,7 @@ static int control(uint32_t request, void *data, ...)
 			vo_fs = !vo_fs;
 
 			FreeGfx(); // Free/Close all gfx stuff (screen windows, buffer...);
-			if ( config(image_width, image_height, window_width, window_height, vo_fs, NULL, image_format) < 0) return VO_FALSE;
+			if ( config(amiga_image_width, amiga_image_height, window_width, window_height, vo_fs, NULL, image_format) < 0) return VO_FALSE;
 
             return VO_TRUE;
 		break;
@@ -888,7 +888,7 @@ static int control(uint32_t request, void *data, ...)
         	is_ontop = !is_ontop;
         	
 			FreeGfx(); // Free/Close all gfx stuff (screen windows, buffer...);
-			if ( config(image_width, image_height, window_width, window_height, FALSE, NULL, image_format) < 0) return VO_FALSE;
+			if ( config(amiga_image_width, amiga_image_height, window_width, window_height, FALSE, NULL, image_format) < 0) return VO_FALSE;
             return VO_TRUE;
 		break;
 		case VOCTRL_UPDATE_SCREENINFO:
@@ -988,8 +988,8 @@ static int32 p96_PlayFile(const char *FileName)
 	old_d_height = 0;
    	keep_width = 0;
     keep_height = 0;
-    image_width = 0;
-    image_height = 0;
+    amiga_image_width = 0;
+    amiga_image_height = 0;
 
 	FirstTime = TRUE;
 
