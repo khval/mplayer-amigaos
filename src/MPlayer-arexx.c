@@ -13,7 +13,7 @@
 #include "MPlayer-arexx.h"
 #include "mp_msg.h"
 
-#define USE_LOCAL_AREXX_GET
+#undef USE_LOCAL_AREXX_GET
 
 #ifdef USE_LOCAL_AREXX_GET
 long rxid_get_sub_visibility();
@@ -464,7 +464,7 @@ void rxFunc(struct ARexxCmd *cmd, long value, long value2, char *str, char *str2
 		break;
 	case RXID_GET_TIME_POS:
 #ifdef USE_LOCAL_AREXX_GET
-		cmd->ac_RC2=rxid_get_time_pos();
+		sprintf(AREXXRESULT,"%d",rxid_get_time_pos());
 #else
 		put_command0(MP_CMD_GET_TIME_POS);
 		sprintf(AREXXRESULT,"%d",get_arexx_rc2());
