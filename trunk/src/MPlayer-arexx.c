@@ -31,13 +31,18 @@ long arexx_rc2_variable, arexx_paused;
 
 char AREXXRESULT[10000];
 
+static struct Task    *MainTask = NULL;           // Pointer to the main task;
+struct Process *ARexx_Process = NULL;
+
 void set_arexx_rc2(long v) 
 { 
 	arexx_rc2_variable = v; 
+	if (ARexx_Process) Signal( (struct Task *) ARexx_Process, SIGBREAKF_CTRL_D );
 }
 
 long get_arexx_rc2() 
 { 
+	Wait( SIGBREAKF_CTRL_D );
 	return arexx_rc2_variable; 
 }
 
@@ -113,8 +118,7 @@ void arexx_help()
 }
 
 
-static struct Task    *MainTask = NULL;           // Pointer to the main task;
-struct Process *ARexx_Process = NULL;
+
 
 static void ArexxTask (void)
 {
@@ -124,7 +128,7 @@ static void ArexxTask (void)
 
 	for(;;)
 	{
-		sigs = Wait( SIGBREAKF_CTRL_C | rxHandler->sigmask );
+		sigs = Wait( SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_D | rxHandler->sigmask );
 		if ( sigs & SIGBREAKF_CTRL_C ) break;
 
 		if (rxHandler)
