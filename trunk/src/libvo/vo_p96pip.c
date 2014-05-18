@@ -96,6 +96,8 @@ ULONG window_height =0;
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
 
+static BOOL FirstTime = TRUE;
+
 extern uint32_t is_fullscreen;
 
 ULONG win_top = 0;
@@ -207,6 +209,12 @@ static ULONG Open_PIPWindow(void)
 
     if ( ( My_Screen = LockPubScreen ( NULL ) ) )
     {
+
+	if (FirstTime)
+	{
+		gfx_center_window(My_Screen, window_width, window_height, &win_left, &win_top);
+		FirstTime = FALSE;
+	}
 
 	My_Window = p96PIP_OpenTags(
 			P96PIP_SourceFormat, 	RGBFB_YUV422CGX,
@@ -427,21 +435,21 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	//else
 	//	d_height = d_width / ratio;
 
-    if (old_d_width==0 || old_d_height==0)
-    {
-        old_d_width     = d_width;
-        old_d_height    = d_height;
-    }
+	if (old_d_width==0 || old_d_height==0)
+	{
+		old_d_width     = d_width;
+		old_d_height    = d_height;
+	}
 
-    if (keep_width==0 || keep_height==0)
-    {
+	if (keep_width==0 || keep_height==0)
+	{
 		keep_width     = d_width;
 		keep_height    = d_height;
-    }
+	}
 
 	amiga_image_width = width;
 	amiga_image_height = height;
-    amiga_image_format = format;
+	amiga_image_format = format;
 
     is_fullscreen = flags & VOFLAG_FULLSCREEN;
 
@@ -449,7 +457,6 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	window_height = d_height;
 
 	EmptyPointer = AllocVec(12, MEMF_PUBLIC | MEMF_CLEAR);
-
 
 	MutexObtain( window_mx );
 
@@ -460,9 +467,6 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	}
 	else
 		ModeID = Open_PIPWindow();
-
-	Printf("--- WINDOW 0x%08lx\n", My_Window);
-	Printf("--- SCREEN 0x%08lx\n", My_Screen);
 
 	if (My_Window)
 	{

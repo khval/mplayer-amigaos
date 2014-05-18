@@ -72,6 +72,8 @@
 struct Task *init_task = NULL;
 extern APTR window_mx;
 
+static BOOL FirstTime = TRUE;
+
 void draw_comp(struct BitMap *the_bitmap,struct Window * the_win, int width,int height);
 
 static vo_info_t info =
@@ -334,7 +336,6 @@ static ULONG Open_Window()
 	// Window
 	ULONG ModeID = INVALID_ID;
 	BOOL WindowActivate = TRUE;
-	static BOOL FirstTime = TRUE;
 
 	My_Window = NULL;
 
@@ -342,128 +343,90 @@ static ULONG Open_Window()
 
 	if ( ( My_Screen = LockPubScreen ( PubScreenName[0] ? PubScreenName : NULL) ) )
 	{
-		struct DrawInfo *dri;
-		ULONG bw, bh;
-		bw =0; bh=0;
-
 		ModeID = GetVPModeID(&My_Screen->ViewPort);
 
-		if ( (dri = GetScreenDrawInfo(My_Screen) ) ) 
+		if (FirstTime)
 		{
-			ULONG bw=0, bh=0;
-
-			switch(gfx_BorderMode)
-			{
-				case NOBORDER:
-						bw = 0;
-						bh = 0;
-						break;
-
-#ifdef __amigaos4__
-				default:
-						bw = My_Screen->WBorLeft + My_Screen->WBorRight;
-						bh = My_Screen->WBorTop + My_Screen->Font->ta_YSize + 1 + My_Screen->WBorBottom;
-#endif
-#ifdef __morphos__
-				default:
-						bw = GetSkinInfoAttrA(dri, SI_BorderLeft, NULL) + GetSkinInfoAttrA(dri, SI_BorderRight, NULL);
-						bh = GetSkinInfoAttrA(dri, SI_BorderTopTitle, NULL) + GetSkinInfoAttrA(dri, SI_BorderBottom, NULL);
-#endif
-			}
-
-
-			if (FirstTime)
-			{
-				win_left = (My_Screen->Width - (window_width + bw)) / 2;
-				win_top  = (My_Screen->Height - (window_height + bh)) / 2;
-				FirstTime = FALSE;
-			}
-
-#ifdef CONFIG_GUI
-		    if (use_gui)	WindowActivate = FALSE;
-#endif
-			
-			switch(gfx_BorderMode)
-			{
-				case NOBORDER:
-
-					My_Window = OpenWindowTags( NULL,
-						WA_CustomScreen,    (ULONG) My_Screen,
-						WA_Left,            win_left,
-						WA_Top,             win_top,
-						WA_InnerWidth,      window_width,
-						WA_InnerHeight,     window_height,
-						WA_SimpleRefresh,   TRUE,
-						WA_CloseGadget,     FALSE,
-						WA_DepthGadget,     FALSE,
-						WA_DragBar,         FALSE,
-						WA_Borderless,      TRUE,
-						WA_SizeGadget,      FALSE,
-						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_COMMON,
-						WA_Flags,           WFLG_REPORTMOUSE,
-						//WA_SkinInfo,				NULL,
-					TAG_DONE);
-					break;
-
-				case TINYBORDER:
-
-					My_Window = OpenWindowTags( NULL,
-						WA_CustomScreen,    (ULONG) My_Screen,
-						WA_Left,            win_left,
-						WA_Top,             win_top,
-						WA_InnerWidth,      window_width,
-						WA_InnerHeight,     window_height,
-						WA_SimpleRefresh,   TRUE,
-						WA_CloseGadget,     FALSE,
-						WA_DepthGadget,     FALSE,
-						WA_DragBar,         FALSE,
-						WA_Borderless,      FALSE,
-						WA_SizeGadget,      TRUE,
-						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_COMMON,
-						WA_Flags,           WFLG_REPORTMOUSE,
-						//WA_SkinInfo,				NULL,
-					TAG_DONE);	
-					break;
-
-				default:
-
-					My_Window = OpenWindowTags( NULL,
-						WA_CustomScreen,    (ULONG) My_Screen,
-#ifdef __morphos__
-						WA_Title,         (ULONG) filename ? MorphOS_GetWindowTitle() : "MPlayer for MorphOS",
-						WA_ScreenTitle,     (ULONG) "MPlayer xxxxx for MorphOS",
-#endif
-#ifdef __amigaos4__
-						WA_Title,         "MPlayer for AmigaOS4",
-						WA_ScreenTitle,     (ULONG) "MPlayer for AmigaOS",
-#endif
-						WA_Left,            win_left,
-						WA_Top,             win_top,
-						WA_InnerWidth,      window_width,
-						WA_InnerHeight,     window_height,
-
-						WA_MinWidth, 		amiga_image_width/3,
-						WA_MinHeight,		amiga_image_height/3,
-						WA_MaxWidth, 		My_Screen -> Width,
-						WA_MaxHeight,		My_Screen -> Height,
-						WA_SimpleRefresh,		TRUE,
-						WA_CloseGadget,     TRUE,
-						WA_DepthGadget,     TRUE,
-						WA_DragBar,         TRUE,
-						WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
-						WA_SizeGadget,      TRUE,
-						WA_SizeBBottom,	TRUE,
-						WA_Activate,        WindowActivate,
-						WA_IDCMP,           IDCMP_COMMON,
-						WA_Flags,           WFLG_REPORTMOUSE,
-						//WA_SkinInfo,        NULL,
-					TAG_DONE);
-			}
-
-			FreeScreenDrawInfo(My_Screen, dri);
+			gfx_center_window(My_Screen, window_width, window_height, &win_left, &win_top);
+			FirstTime = FALSE;
 		}
+
+		switch(gfx_BorderMode)
+		{
+			case NOBORDER:
+				My_Window = OpenWindowTags( NULL,
+					WA_CustomScreen,    (ULONG) My_Screen,
+					WA_Left,            win_left,
+					WA_Top,             win_top,
+					WA_InnerWidth,      window_width,
+					WA_InnerHeight,     window_height,
+					WA_SimpleRefresh,   TRUE,
+					WA_CloseGadget,     FALSE,
+					WA_DepthGadget,     FALSE,
+					WA_DragBar,         FALSE,
+					WA_Borderless,      TRUE,
+					WA_SizeGadget,      FALSE,
+					WA_Activate,        WindowActivate,
+					WA_IDCMP,           IDCMP_COMMON,
+					WA_Flags,           WFLG_REPORTMOUSE,
+					//WA_SkinInfo,				NULL,
+				TAG_DONE);
+				break;
+
+			case TINYBORDER:
+				My_Window = OpenWindowTags( NULL,
+					WA_CustomScreen,    (ULONG) My_Screen,
+					WA_Left,            win_left,
+					WA_Top,             win_top,
+					WA_InnerWidth,      window_width,
+					WA_InnerHeight,     window_height,
+					WA_SimpleRefresh,   TRUE,
+					WA_CloseGadget,     FALSE,
+					WA_DepthGadget,     FALSE,
+					WA_DragBar,         FALSE,
+					WA_Borderless,      FALSE,
+					WA_SizeGadget,      TRUE,
+					WA_Activate,        WindowActivate,
+					WA_IDCMP,           IDCMP_COMMON,
+					WA_Flags,           WFLG_REPORTMOUSE,
+					//WA_SkinInfo,				NULL,
+					TAG_DONE);	
+				break;
+
+			default:
+				My_Window = OpenWindowTags( NULL,
+					WA_CustomScreen,    (ULONG) My_Screen,
+#ifdef __morphos__
+					WA_Title,         (ULONG) filename ? MorphOS_GetWindowTitle() : "MPlayer for MorphOS",
+					WA_ScreenTitle,     (ULONG) "MPlayer xxxxx for MorphOS",
+#endif
+#ifdef __amigaos4__
+					WA_Title,         "MPlayer for AmigaOS4",
+					WA_ScreenTitle,     (ULONG) "MPlayer for AmigaOS",
+#endif
+					WA_Left,            win_left,
+					WA_Top,             win_top,
+					WA_InnerWidth,      window_width,
+					WA_InnerHeight,     window_height,
+					WA_MinWidth, 		amiga_image_width/3,
+					WA_MinHeight,		amiga_image_height/3,
+					WA_MaxWidth, 		My_Screen -> Width,
+					WA_MaxHeight,		My_Screen -> Height,
+					WA_SimpleRefresh,		TRUE,
+					WA_CloseGadget,     TRUE,
+					WA_DepthGadget,     TRUE,
+					WA_DragBar,         TRUE,
+					WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
+					WA_SizeGadget,      TRUE,
+					WA_SizeBBottom,	TRUE,
+					WA_Activate,        WindowActivate,
+					WA_IDCMP,           IDCMP_COMMON,
+					WA_Flags,           WFLG_REPORTMOUSE,
+					//WA_SkinInfo,        NULL,
+					TAG_DONE);
+		}
+
+
 
 		vo_screenwidth = My_Screen->Width;
 		vo_screenheight = My_Screen->Height;
@@ -471,10 +434,6 @@ static ULONG Open_Window()
 		vo_dwidth = amiga_image_width;
 		vo_dheight = amiga_image_height;
 
-/*
-		vo_dwidth = My_Window->Width;
-		vo_dheight = My_Window->Height;
-*/
 		vo_fs = 0;
 
 		UnlockPubScreen(NULL, My_Screen);
