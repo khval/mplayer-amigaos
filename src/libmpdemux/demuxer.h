@@ -342,6 +342,12 @@ static inline void free_demux_packet(demux_packet_t* dp){
   free(dp);
 }
 
+#ifdef __amigaos4__
+#ifndef ULONG_MAX
+#define ULONG_MAX ((size_t)-1)
+#endif
+#endif
+
 #ifndef SIZE_MAX
 #define SIZE_MAX ((size_t)-1)
 #endif

@@ -221,7 +221,7 @@ void AmigaOS_ParseArg(int argc, char *argv[], int *new_argc, char ***new_argv)
 	{
 		static char temp[8192];
 
-		if (GetProgramName(temp, sizeof(temp)))
+		if (GetCliProgramName(temp, sizeof(temp)))
 		{
 			strcpy(progname, "PROGDIR:");
 			strlcat(progname, FilePart(temp), sizeof(progname));
@@ -563,7 +563,7 @@ int AmigaOS_Open(int argc, char *argv[])
 	if ( ! open_lib( "asl.library", 0L , "main", 1, &AslBase, (struct Interface **) &IAsl  ) ) return -1;
 	if ( ! open_lib( "intuition.library", 51L , "main", 1, &IntuitionBase, (struct Interface **) &IIntuition  ) ) return -1;
 	if ( ! open_lib( "graphics.library", 51L , "main", 1, &GraphicsBase, (struct Interface **) &IGraphics  ) ) return -1;
-	if ( ! open_lib( "application.library", 51L , "application", 1, &ApplicationBase, (struct Interface **) &IApplication  ) ) return -1;
+	if ( ! open_lib( "application.library", 51L , "application", 2, &ApplicationBase, (struct Interface **) &IApplication  ) ) return -1;
 	if ( ! open_lib( "workbench.library", 51L , "main", 1, &WorkbenchBase, (struct Interface **) &IWorkbench ) ) return -1;
 	if ( ! open_lib( "keymap.library", 51L , "main", 1, &KeymapBase, (struct Interface **) &IKeymap ) ) return -1;
 	if ( ! open_lib( "layers.library", 51L , "main", 1, &LayersBase, (struct Interface **) &ILayers ) ) return -1;
