@@ -86,6 +86,8 @@ extern struct ApplicationIFace *IApplication;
 #endif
 
 extern APTR window_mx;
+extern IMAGE_WIDTH;
+extern IMAGE_HEIGHT;
 
 // Set here, and use in the vo_gfx_**
 char * gfx_monitor = NULL;
@@ -94,11 +96,7 @@ ULONG WantedModeID = 0;
 // Blank pointer
 UWORD *EmptyPointer = NULL;
 
-
 uint32_t is_fullscreen;
-uint32_t amiga_image_width;
-uint32_t amiga_image_height;
-
 char PubScreenName[128] = "";
 
 #define NOBORDER			0
@@ -140,6 +138,10 @@ void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable)
 struct MsgPort *awport;
 struct AppWindow *appwin;
 ULONG  appwinsig, appid = 1, appuserdata = 0;
+
+uint32_t   amiga_image_width;            // well no comment
+uint32_t   amiga_image_height;
+
 
 /* Drag/Size gadgets definitions */
 static struct Gadget MyDragGadget =
@@ -482,6 +484,9 @@ void gfx_Stop(struct Window *My_Window)
 /***************************************************/
 
 int secs,secs2,mics,mics2;
+int resize_sec;
+
+BOOL is_user_resized = TRUE;
 
 BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,
 	uint32_t *window_left, uint32_t *window_top )
@@ -498,6 +503,16 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 	}
 
 	info_sig=1L<<(My_Window->UserPort)->mp_SigBit;
+
+#ifdef CONFIG_GUI
+if(!use_gui)
+{
+#endif
+
+
+#ifdef CONFIG_GUI
+}
+#endif
 
 	if (is_fullscreen && !mouse_hidden)
 	{
@@ -526,6 +541,8 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 		UWORD Qualifier;
 		int MouseX, MouseY;
 		struct IntuiWheelData *mouse_wheel;
+		ULONG x,y,w,h;
+		float rate;
 
 		while ( ( IntuiMsg = (struct IntuiMessage *) GetMsg( My_Window->UserPort ) ) )
 		{
@@ -540,6 +557,40 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 
 			switch( Class )
 			{
+				case  IDCMP_INTUITICKS:
+
+					if ( is_fullscreen) break;
+
+					 if  ((IntuiMsg->Seconds - resize_sec >1)&&(IntuiMsg->Seconds - resize_sec<=2))
+					{
+						rate = (float) amiga_image_width /  (float) amiga_image_height;
+						w = *window_width;
+						h = (LONG)  ((float) *window_width / rate);
+
+						if (My_Screen)
+						{
+							Printf("Have My_Screen\n");
+
+							if (h > (My_Screen -> Height - My_Window -> BorderTop - My_Window ->BorderBottom))
+							{
+								h = My_Screen -> Height - My_Window -> BorderTop - My_Window ->BorderBottom;
+								w = (LONG)  ((float) h * rate);
+							}
+						}
+
+						if (h !=  *window_height)
+						{
+							SetWindowAttrs(My_Window, 	
+								WA_InnerWidth, w,
+								WA_InnerHeight, h,
+								TAG_END);
+						}
+						resize_sec = IntuiMsg->Seconds - 10;
+					}
+					
+
+					break;
+
 				case IDCMP_CLOSEWINDOW: 
 					mplayer_put_key(KEY_ESC);   // that for whole exit when video-window close
 
@@ -560,7 +611,6 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 					break;
 
 				case IDCMP_MOUSEBUTTONS:
-					printf("%s:%ld\n",__FUNCTION__,__LINE__);
 					// Blanks pointer stuff
 					if (is_fullscreen && mouse_hidden)
 					{
@@ -685,6 +735,7 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 						UpdateGadgets(My_Window, *window_width, *window_height);
 					}
 
+					resize_sec = IntuiMsg->Seconds;
 					retval = TRUE;
 					break;
 #ifdef __amigaos4__
@@ -1006,3 +1057,4 @@ void gfx_center_window(struct Screen *My_Screen, ULONG window_width, ULONG windo
 		FreeScreenDrawInfo(My_Screen, dri);
 	}
 }
+
