@@ -42,12 +42,17 @@
 #ifdef __amigaos4__
 #include <libraries/keymap.h>
 #include <proto/Picasso96API.h>
+
+// For AmigaOS4 Blanker.
+#include <proto/application.h>
+#include <libraries/application.h>
+extern uint32 AppID;
+extern struct ApplicationIFace *IApplication;
 #endif
 
 #ifndef   DOS_RDARGS_H
 #include <dos/rdargs.h>
 #endif
-
 
 #ifndef   INTUITION_CLASSES_H
 #include <intuition/classes.h>
@@ -885,36 +890,24 @@ static int blanker_count = 0; /* not too useful, but it should be 0 at the end *
 
 void gfx_ControlBlanker(struct Screen * screen, ULONG enable)
 {
-	struct Library * ibase = (struct Library *) IntuitionBase;
-	if(ibase)
+	if(enable)
 	{
-		if(ibase->lib_Version > 50 || (ibase->lib_Version == 50 && ibase->lib_Revision >=61))
+		blanker_count++;
+	}
+	else
+	{
+		blanker_count--;
+	}
+
+	if (AppID>0)
+	{
+		if (IApplication)
 		{
-			if(enable)
-			{
-				blanker_count++;
-			}
-			else
-			{
-				blanker_count--;
-			}
-
-			if(!screen)
-			{
-				screen = LockPubScreen (PubScreenName[0] ? PubScreenName : NULL);
-				UnlockPubScreen(NULL, screen);
-			}
-
-			mp_msg(MSGT_VO, MSGL_INFO, "VO: %s blanker\n", enable ? "Enabling" : "Disabling" );
-			
-			if(screen)
-			{
-//#ifndef __amigaos4__
-//				SetAttrs(screen, SA_StopBlanker, enable ? FALSE : TRUE, TAG_DONE);
-//#endif
-			}
+			SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, enable ? TRUE : FALSE, TAG_DONE);
 		}
 	}
+
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: %s blanker\n", enable ? "Enabling" : "Disabling" );
 }
 
 /* Just here for debug purpose */
