@@ -66,6 +66,41 @@ extern struct ApplicationIFace *IApplication;
 #include <osdep/keycodes.h>
 
 #include <string.h>
+
+#ifdef __amigaos4__
+// -- missing strcasestr in string.h
+
+static char *strcasestr(char *heystack,char *needle)
+{
+	char h,  n;
+	char *hptr,*nptr;
+	char *first = NULL;
+	int needle_len = strlen(needle);
+	int found_len =0;
+
+	nptr = needle;
+	for (hptr = heystack; *hptr; hptr++)
+	{
+		h = *hptr;
+		n = *nptr;
+		if ((h>='a')&&(h<='z')) h=h-'a'+'A';
+		if ((n>='a')&&(n<='z')) n=n-'a'+'A';
+
+		if (h==n)
+		{
+			first = first ? first : hptr ; 	found_len++;	nptr++;
+		}
+		else
+		{
+			nptr = needle;	first = NULL;	found_len=0;
+		}
+
+		if (found_len == needle_len) break;
+	}
+	return first;
+}
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -242,10 +277,10 @@ BOOL gfx_GiveArg(const char *arg)
 			PtrArg = PtrSeparator + 1;
 			if (!*PtrArg) goto end;
 
-			if (!(memcmp(PtrArg, "NOBORDER", strlen("NOBORDER") ) ) ) gfx_BorderMode = NOBORDER;
-			else if (!(memcmp(PtrArg, "TINYBORDER", strlen("TINYBORDER") ) ) ) gfx_BorderMode = TINYBORDER;
-			else if (!(memcmp(PtrArg, "ALWAYSBORDER", strlen("ALWAYSBORDER") ) ) ) gfx_BorderMode = ALWAYSBORDER;
-			else if (!(memcmp(PtrArg, "DISAPBORDER", strlen("DISAPBORDER") ) ) ) gfx_BorderMode = DISAPBORDER;
+			if (strncasecmp(PtrArg, "NOBORDER", strlen("NOBORDER")) == 0 ) gfx_BorderMode = NOBORDER;
+			else if (strncasecmp(PtrArg, "TINYBORDER", strlen("TINYBORDER")) == 0 ) gfx_BorderMode = TINYBORDER;
+			else if (strncasecmp(PtrArg, "ALWAYSBORDER", strlen("ALWAYSBORDER") ) == 0 ) gfx_BorderMode = ALWAYSBORDER;
+			else if (strncasecmp(PtrArg, "DISAPBORDER", strlen("DISAPBORDER") ) == 0 ) gfx_BorderMode = DISAPBORDER;
 
 #ifdef CONFIG_GUI
 			if(use_gui && mygui->embedded) /* Check modes supported by GUI */
@@ -258,7 +293,7 @@ BOOL gfx_GiveArg(const char *arg)
 #endif
 
 			/* mode id ? */
-			if((ptr = strstr(PtrArg, "MODEID=")))
+			if((ptr = strcasestr(PtrArg, "MODEID=")))
 			{
 				TEXT mode[64];
 				STRPTR PtrSeparator = index(ptr, ':' );
@@ -281,7 +316,7 @@ BOOL gfx_GiveArg(const char *arg)
 					}
 				}
 			}
-			else if((ptr = strstr(PtrArg, "PUBSCREEN=")))
+			else if((ptr = strcasestr(PtrArg, "PUBSCREEN=")))
 			{
 				TEXT mode[64];
 				STRPTR PtrSeparator = index(ptr, ':' );
