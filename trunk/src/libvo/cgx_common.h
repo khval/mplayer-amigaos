@@ -20,6 +20,8 @@ extern struct IntuitionBase *     IntuitionBase;
 extern struct Library * 		  LayersBase;
 #endif
 
+extern ULONG gfx_common_rgb_format;
+
 #define IDCMP_COMMON IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | \
 	IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | \
 	IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_INTUITICKS
@@ -39,6 +41,8 @@ extern ULONG gfx_BorderMode;
 #define gfx_NOSCALE	    ( 1L << 2)	// Do not scale (this way it's faster but can be very ugly)
 #define gfx_BUFFERING	( 1L << 3)	// Ask to use Multiple buffering if available
 #define gfx_NOPLANAR	( 1L << 4)	// Don't use planar overlay
+
+#define gfx_common_screenname "MPlayer for AmigaOS"
 
 #ifndef SA_StopBlanker
 #define SA_StopBlanker (SA_Dummy + 121)

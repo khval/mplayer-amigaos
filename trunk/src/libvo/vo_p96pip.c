@@ -231,8 +231,8 @@ static ULONG Open_PIPWindow(void)
 			P96PIP_ColorKeyPen, 	0,
 
 			WA_CustomScreen,	(ULONG) My_Screen,
-			WA_ScreenTitle,		(ULONG) "MPlayer",
-			WA_Title,			"Mplayer (PIP)",
+			WA_ScreenTitle,		(ULONG) gfx_common_screenname,
+			WA_Title,			"MPlayer for AmigaOS4 (PIP)",
 			WA_Left,			win_left,
 			WA_Top,				win_top,
 			WA_InnerWidth,		window_width,
