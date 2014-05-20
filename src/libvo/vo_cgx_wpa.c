@@ -277,13 +277,12 @@ static ULONG Open_Window()
 			default:
 				My_Window = OpenWindowTags( NULL,
 					WA_CustomScreen,    (ULONG) My_Screen,
+					WA_ScreenTitle,     (ULONG) gfx_common_screenname,
 #ifdef __morphos__
 					WA_Title,         (ULONG) filename ? MorphOS_GetWindowTitle() : "MPlayer for MorphOS",
-					WA_ScreenTitle,     (ULONG) "MPlayer xxxxx for MorphOS",
 #endif
 #ifdef __amigaos4__
 					WA_Title,         "MPlayer for AmigaOS4",
-					WA_ScreenTitle,     (ULONG) "MPlayer for AmigaOS",
 #endif
 					WA_Left,            win_left,
 					WA_Top,             win_top,
