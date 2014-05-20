@@ -129,6 +129,7 @@ struct CyberGfxIFace *ICyberGfx = NULL;
 #endif
 
 struct Library * IntuitionBase = NULL;
+struct IntuitionIFace *IIntuition_SDL_workaround = NULL;
 
 UBYTE  TimerDevice = -1; // -1 -> not opened
 struct TimeRequest 		 *TimerRequest = NULL;
@@ -367,6 +368,8 @@ fail:
 /******************************/
 void AmigaOS_Close(void)
 {
+	IIntuition = IIntuition_SDL_workaround;
+
 	if (OldPtr)
 	{
 		//SetTaskPri(p,0);
@@ -417,6 +420,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (IntuitionBase) CloseLibrary(IntuitionBase); IntuitionBase = 0;
 	if (IIntuition) DropInterface((struct Interface*) IIntuition); IIntuition = 0;
+	IIntuition_SDL_workaround = 0;
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -568,6 +572,9 @@ int AmigaOS_Open(int argc, char *argv[])
 	if ( ! open_lib( "keymap.library", 51L , "main", 1, &KeymapBase, (struct Interface **) &IKeymap ) ) return -1;
 	if ( ! open_lib( "layers.library", 51L , "main", 1, &LayersBase, (struct Interface **) &ILayers ) ) return -1;
 	if ( ! open_lib( "Picasso96API.library", 51L , "main", 1, &Picasso96Base, (struct Interface **) &IP96 ) ) return -1;
+
+	IIntuition_SDL_workaround = IIntuition;	// save IIntuition as SDL sets this to NULL :-(
+
 
 #ifdef CONFIG_AHI
 //	open_ahi();
