@@ -445,6 +445,9 @@ static ULONG Open_Window()
 	if ( !My_Window || !EmptyPointer)
 	{
 		mp_msg(MSGT_VO, MSGL_ERR, "Unable to open a window\n");
+
+		if (PubScreenName[0]) PubScreenName[0] = 0;	// open on workbench if no pubscreen found.
+
 		uninit();
 		return INVALID_ID;
 	}
@@ -732,6 +735,12 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		{
 			dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			ModeID = Open_Window();
+		}
+
+		if (!My_Window)
+		{
+			uninit();
+			return -1;
 		}
 
 		if (the_bitmap)
