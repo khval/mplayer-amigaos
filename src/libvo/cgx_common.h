@@ -21,6 +21,7 @@ extern struct Library * 		  LayersBase;
 #endif
 
 extern ULONG gfx_common_rgb_format;
+extern BOOL gfx_novsync;
 
 #define IDCMP_COMMON IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | \
 	IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | \
