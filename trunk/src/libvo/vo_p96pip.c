@@ -841,7 +841,7 @@ static void flip_page(void)
 
 			NextWorkBuf = (WorkBuf+1) % numbuffers;
 
-			if (NextWorkBuf == DispBuf) WaitTOF();
+			if ((NextWorkBuf == DispBuf)&&(gfx_novsync==FALSE)) WaitTOF();
 
 			p96PIP_SetTags(My_Window,	P96PIP_VisibleBuffer, WorkBuf,
 						 		P96PIP_WorkBuffer,    NextWorkBuf,
