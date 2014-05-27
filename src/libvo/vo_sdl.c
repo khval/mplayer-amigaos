@@ -788,15 +788,22 @@ config(uint32_t width, uint32_t height, uint32_t d_width, uint32_t d_height, uin
 		mp_msg(MSGT_VO,MSGL_V, "SDL: using flipped video (only with RGB/BGR/packed YUV)\n");
 		priv->flip = 1;
 	}
+
 	if(flags&VOFLAG_FULLSCREEN) {
  	  	mp_msg(MSGT_VO,MSGL_V, "SDL: setting zoomed fullscreen without modeswitching\n");
  		    mp_msg(MSGT_VO,MSGL_INFO, MSGTR_LIBVO_SDL_InfoPleaseUseVmOrZoom);
-		priv->fulltype = VOFLAG_FULLSCREEN;
+
+#ifndef __amigaos4__
+		priv->fulltype = VOFLAG_FULLSCREEN;		// this one crashes on AmigaOS4.
+#else
+		priv->fulltype = VOFLAG_SWSCALE;
+#endif
 		set_fullmode(priv->fullmode);
+
           	/*if((priv->surface = SDL_SetVideoMode (d_width, d_height, priv->bpp, priv->sdlfullflags)))
 			SDL_ShowCursor(0);*/
-	} else
-	if(flags&VOFLAG_MODESWITCHING) {
+	}
+	else if(flags&VOFLAG_MODESWITCHING) {
  	 	mp_msg(MSGT_VO,MSGL_V, "SDL: setting zoomed fullscreen with modeswitching\n");
 		priv->fulltype = VOFLAG_MODESWITCHING;
 		set_fullmode(priv->fullmode);
@@ -815,9 +822,12 @@ config(uint32_t width, uint32_t height, uint32_t d_width, uint32_t d_height, uin
 		||(strcmp(priv->driver, "Quartz") == 0)
 		||(strcmp(priv->driver, "cgx") == 0)
 		||(strcmp(priv->driver, "os4video") == 0)
-		||((strcmp(priv->driver, "aalib") == 0) && priv->X)){
- 			mp_msg(MSGT_VO,MSGL_V, "SDL: setting windowed mode\n");
-            set_video_mode(priv->dstwidth, priv->dstheight, priv->bpp, priv->sdlflags);
+		||((strcmp(priv->driver, "aalib") == 0) && priv->X)
+		||(strcmp(priv->driver, "OS4") == 0)
+		)
+		{
+			mp_msg(MSGT_VO,MSGL_V, "SDL: setting windowed mode\n");
+			set_video_mode(priv->dstwidth, priv->dstheight, priv->bpp, priv->sdlflags);
 		}
 		else {
  			mp_msg(MSGT_VO,MSGL_V, "SDL: setting zoomed fullscreen with modeswitching\n");
