@@ -518,7 +518,7 @@ void rxFunc(struct ARexxCmd *cmd, long value, long value2, char *str, char *str2
 #ifdef HAS_DVBIN_SUPPORT
 	case RXID_DVB_SET_CHANNEL:    put_icommand2(MP_CMD_DVB_SET_CHANNEL,value,value2); break; //use value and value2
 #endif
-	case RXID_SCREENSHOT:         put_command0(MP_CMD_SCREENSHOT); break;
+	case RXID_SCREENSHOT:         put_icommand1(MP_CMD_SCREENSHOT,0); break;
 	case RXID_USE_MASTER:         put_command0(MP_CMD_MIXER_USEMASTER); break;
 	case RXID_MENU:               put_scommand1(MP_CMD_MENU,str); break; //use str
 	case RXID_SET_MENU:           put_scommand1(MP_CMD_SET_MENU,str); break; //use str
@@ -532,9 +532,9 @@ void rxFunc(struct ARexxCmd *cmd, long value, long value2, char *str, char *str2
 	case RXID_HIDE:               put_command0(MP_CMD_CHIDE); break;
 
 	default:
-		cmd -> ac_RC = -3;		// Unknown ARexx command
+		cmd -> ac_RC = RC_FATAL;		// Unknown ARexx command
   }
 
-	Printf("RC: %ld,%ld,'%s'\n",cmd ->ac_RC,cmd ->ac_RC2, cmd -> ac_Result);
+	Printf("RC: %ld,RC2: %ld, Result: '%s'\n",cmd ->ac_RC,cmd ->ac_RC2, cmd -> ac_Result);
 
 }
