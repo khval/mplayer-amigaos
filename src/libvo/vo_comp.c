@@ -24,6 +24,12 @@
 
 #include "aspect.h"
 
+//--becnhmark--
+struct timezone dontcare = { 0,0 };
+struct timeval before, after;
+ULONG benchmark_frame_cnt = 0;
+//------------------
+
 #include <proto/Picasso96API.h>
 
 #include "../ffmpeg/libswscale/swscale.h"
@@ -32,6 +38,8 @@
 #include "../libmpcodecs/vf_scale.h"
 
 #ifdef __morphos__
+#include <proto/cybergraphics.h>
+#include <cybergraphx/cybergraphics.h>
 #include "../morphos_stuff.h"
 #endif
 
@@ -48,12 +56,8 @@
 #define dprintf(...)
 
 // OS specific
-//#include <libraries/cybergraphics.h>
-//#include <proto/cybergraphics.h>
-//#include <proto/graphics.h>
 
-#include <proto/cybergraphics.h>
-#include <cybergraphx/cybergraphics.h>
+
 
 #include <graphics/gfxbase.h>
 
@@ -91,16 +95,49 @@ float x, y;
 float s, t, w; 
 }; 
 
+void print_monitor_info()
+{
+	struct MonitorSpec *ms;
+	if (ms = OpenMonitor(NULL,NULL))
+	{
+		Printf("monitor ratio: %ld, %ld\n", ms -> ratioh, ms-> ratiov);
+
+		CloseMonitor(ms);
+	}
+}
+
+struct BitMop *the_bitmap = NULL;
+struct RenderInfo output_ri;
+
+static uint32_t   org_amiga_image_width;            // well no comment
+static uint32_t   org_amiga_image_height;
+
+extern uint32_t   amiga_image_width;            // well no comment
+extern uint32_t   amiga_image_height;
+static uint32_t   amiga_image_bpp;            	// image bpp
+
+void 	alloc_output_buffer( ULONG width, ULONG height )
+{
+	amiga_image_width = width ;
+	amiga_image_height = height ;
+	org_amiga_image_width = width;
+	org_amiga_image_height = height;
+
+	output_ri.BytesPerRow = amiga_image_width*amiga_image_bpp;
+	output_ri.RGBFormat = gfx_common_rgb_format;
+	output_ri.pad = 0;
+	output_ri.Memory = AllocVec( output_ri.BytesPerRow * height+2 , MEMF_CLEAR);
+
+}
+
+
 
 void draw_comp_bitmap(struct BitMap *the_bitmap,struct BitMap *the_bitmap_dest, int width,int height, int wx,int wy,int ww, int wh)
 {
 	#define STEP(a,xx,yy,ss,tt,ww)   P[a].x= xx; P[a].y= yy; P[a].s= ss; P[a].t= tt; P[a].w= ww;  
 
 	int error;
-
 	struct XYSTW_Vertex3D P[6];
-
-
 
 	STEP(0, wx, wy ,0 ,0 ,1);
 	STEP(1, wx+ww,wy,width,0,1);
@@ -151,12 +188,6 @@ extern char PubScreenName[128];
 
 // not OS specific
 
-static uint32_t   org_amiga_image_width;            // well no comment
-static uint32_t   org_amiga_image_height;
-
-extern uint32_t   amiga_image_width;            // well no comment
-extern uint32_t   amiga_image_height;
-
 static uint32_t   window_width;           // width and height on the window
 static uint32_t   window_height;          // can be different from the image
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
@@ -168,7 +199,6 @@ BOOL	is_paused = FALSE;
 extern UWORD *EmptyPointer;               // Blank pointer
 extern ULONG WantedModeID;
 
-static uint32_t   amiga_image_bpp;            	// image bpp
 static uint32_t   offset_x;               	// offset in the rp where we have to display the image
 static uint32_t   offset_y;               	// ...
 
@@ -187,9 +217,6 @@ struct BackFillArgs
 	LONG              offsetx;
 	LONG              offsety;
 };
-
-struct BitMop *the_bitmap = NULL;
-char *amiga_image_buffer = NULL;
 
 
 
@@ -237,7 +264,7 @@ static void draw_inside_window()
 
 	if (!inner_bitmap)
 	{
-		inner_bitmap = AllocBitMap( ww , wh, 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
+		inner_bitmap = AllocBitMap( ww , wh, 32, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
 	}
 
 	if (inner_bitmap)
@@ -256,26 +283,26 @@ static void draw_inside_window()
 static void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs)
 {
 	struct BitMap *bitmap;
+	struct RastPort rp;
 	int ww;
 	int wh;
-	struct RastPort rp;
-
-	InitRastPort(&rp);
 
 	ww = My_Window->Width - My_Window->BorderLeft - My_Window->BorderRight;
 	wh = My_Window->Height - My_Window->BorderTop - My_Window->BorderBottom;
 
-	bitmap = AllocBitMap( ww , wh, 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
+	bitmap = AllocBitMap( ww , wh, 32, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
 	if (bitmap)
 	{
+		InitRastPort(&rp);
 		rp.BitMap = the_bitmap;
-		WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	&rp,0,0,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
+
+		p96WritePixelArray( &output_ri, 0, 0, &rp, 0,0, amiga_image_width,amiga_image_height);
 
 		draw_comp_bitmap(the_bitmap, bitmap, amiga_image_width, amiga_image_height,	0,0,ww,wh);
 
 		BltBitMapRastPort(bitmap, 0, 0, My_Window -> RPort,
-			My_Window -> BorderLeft + My_Window -> LeftEdge,
-			My_Window -> BorderTop + My_Window -> TopEdge,
+			My_Window -> BorderLeft,
+			My_Window -> BorderTop,
 			ww, wh,0xc0);
 
 		FreeBitMap(bitmap);
@@ -297,20 +324,18 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 	struct RenderInfo ri;
 	uint32 BMLock;
 
-/*
-	if (BMLock = p96LockBitMap( the_bitmap, (UBYTE*) &ri, sizeof(ri)))
+	if (output_ri.RGBFormat == RGBFB_A8R8G8B8)
 	{
 		vo_draw_alpha_rgb32(w,h,src,srca,
-				stride,
-				(UBYTE *) ( (ULONG) ri.Memory + (y0*ri.BytesPerRow)+(x0*4) ), ri.BytesPerRow );
-
-		 p96UnlockBitMap(the_bitmap, BMLock);
-	}
-*/
-
-	vo_draw_alpha_rgb32(w,h,src,srca,
 			stride,
-			(UBYTE *) ( (ULONG) amiga_image_buffer + (y0*amiga_image_width*amiga_image_bpp)+(x0*amiga_image_bpp) ), amiga_image_width*amiga_image_bpp );
+			(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
+	}
+	else
+	{
+		vo_draw_alpha_rgb24(w,h,src,srca,
+			stride,
+			(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
+	}
 }
 
 
@@ -325,6 +350,9 @@ static int preinit(const char *arg)
 	}
 
 	gfx_Message();
+
+	benchmark_frame_cnt = 0;
+	gettimeofday(&before,&dontcare);		// to get time before
 
 	return 0;
 }
@@ -344,6 +372,10 @@ static ULONG Open_Window()
 	if ( ( My_Screen = LockPubScreen ( PubScreenName[0] ? PubScreenName : NULL) ) )
 	{
 		ModeID = GetVPModeID(&My_Screen->ViewPort);
+
+		printf("screen %f\n", (float) My_Screen -> Width / (float) My_Screen -> Height);
+
+		print_monitor_info();
 
 		if (FirstTime)
 		{
@@ -407,8 +439,8 @@ static ULONG Open_Window()
 					WA_Top,             win_top,
 					WA_InnerWidth,      window_width,
 					WA_InnerHeight,     window_height,
-					WA_MinWidth, 		amiga_image_width/3,
-					WA_MinHeight,		amiga_image_height/3,
+					WA_MinWidth, 		(window_width/3) > 100 ? window_width/3 : 100,
+					WA_MinHeight,		(window_height/3) > 100 ? window_height/3 : 100,
 					WA_MaxWidth, 		My_Screen -> Width,
 					WA_MaxHeight,		My_Screen -> Height,
 					WA_SimpleRefresh,		TRUE,
@@ -424,8 +456,6 @@ static ULONG Open_Window()
 					//WA_SkinInfo,        NULL,
 					TAG_DONE);
 		}
-
-
 
 		vo_screenwidth = My_Screen->Width;
 		vo_screenheight = My_Screen->Height;
@@ -483,7 +513,7 @@ static ULONG Open_FullScreen()
 	ULONG out_width = 0;
 	ULONG out_height = 0;
 
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
+	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	gfx_get_max_mode(32,&max_width,&max_height);
 
@@ -510,12 +540,12 @@ static ULONG Open_FullScreen()
 		return INVALID_ID;
 	}
 
-	depth = ( FALSE ) ? 16 : GetCyberIDAttr( CYBRIDATTR_DEPTH , ModeID);
+	depth = ( FALSE ) ? 16 : p96GetModeIDAttr( ModeID, P96IDA_DEPTH );
 
 	screen_width=amiga_image_width;
 	screen_height=amiga_image_height;
 
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
+	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if(!WantedModeID)
 	{
@@ -527,7 +557,7 @@ static ULONG Open_FullScreen()
 						P96BIDTAG_NominalHeight, screen_height,
 						TAG_DONE);
 
-			Printf("screen_width=%ld screen_height=%ld amiga_image_width=%ld amiga_image_height=%ld %lx\n",
+			dprintf("screen_width=%ld screen_height=%ld amiga_image_width=%ld amiga_image_height=%ld %lx\n",
 				screen_width,screen_height,amiga_image_width,amiga_image_height,ModeID);
 
 			if ( ModeID == INVALID_ID ) 
@@ -570,7 +600,7 @@ static ULONG Open_FullScreen()
 		screen_height = buffer_Dimmension.Nominal.MaxY - buffer_Dimmension.Nominal.MinY + 1;
 	}
 
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
+	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp] Full screen.\n");
 	mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp] Prefered screen is : %s\n", (gfx_monitor) ? gfx_monitor : "default" );
@@ -601,7 +631,7 @@ static ULONG Open_FullScreen()
 	/* Fill the screen with black color */
 	p96RectFill(&(My_Screen->RastPort), 0,0, My_Screen->Width, My_Screen->Height, 0x00000000);
 
-	Printf("%s:%ld\n",__FUNCTION__,__LINE__);
+	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 
 #if PUBLIC_SCREEN
@@ -624,7 +654,7 @@ static ULONG Open_FullScreen()
    	aspect(&out_width,&out_height,A_ZOOM);
 
 
-	Printf("%s:%ld OpenWindowTags()  \n",__FUNCTION__,__LINE__);
+	dprintf("%s:%ld OpenWindowTags()  \n",__FUNCTION__,__LINE__);
 
 	left=(My_Screen->Width-out_width)/2;
 	top=(My_Screen->Height-out_height)/2;
@@ -677,8 +707,6 @@ static ULONG Open_FullScreen()
 
 	gfx_ControlBlanker(My_Screen, FALSE);
 
-	Printf("%s:%ld -- END OF FUNCTION \n",__FUNCTION__,__LINE__);
-
 	return ModeID;
 } 
 
@@ -702,7 +730,6 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		     uint32_t in_format)
 {
 	ULONG ModeID = INVALID_ID;
-	struct RenderInfo ri;
 	uint32 BMLock;
 
 	if (My_Window) return 0;
@@ -710,10 +737,17 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	is_fullscreen = flags & VOFLAG_FULLSCREEN;
 	is_paused = FALSE;
 
-	amiga_image_format = in_format;
+	amiga_image_format = in_format; 
 
 	// backup info
-	amiga_image_bpp = 4;
+	if (gfx_common_rgb_format ==RGBFB_A8R8G8B8)
+	{
+		amiga_image_bpp = 4;
+	}
+	else
+	{
+		amiga_image_bpp = 3;
+	}
 
 	org_amiga_image_width = width;
 	org_amiga_image_height =height;
@@ -721,8 +755,14 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	amiga_image_width = width & -16;
 	amiga_image_height = height ;
 
-	window_width = d_width & -16;
+	window_width = d_width ;
 	window_height = d_height;
+
+	while ((window_width<300)||(window_height<300))
+	{
+		window_width *= 2;
+		window_height *= 2;
+	}
 
 	MutexObtain( window_mx );
 	
@@ -750,16 +790,20 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 			FreeBitMap(the_bitmap);
 		}
 
-		the_bitmap = AllocBitMap( amiga_image_width , amiga_image_height, 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
-		amiga_image_buffer = AllocVec( (org_amiga_image_width * 4) * (org_amiga_image_height+2) , MEMF_CLEAR);
+		the_bitmap = AllocBitMap( amiga_image_width , amiga_image_height, gfx_common_rgb_format == RGBFB_A8R8G8B8 ? 32 : 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
+
+		alloc_output_buffer( org_amiga_image_width, org_amiga_image_height );
+
+		if (!output_ri.Memory)
+		{
+			Printf("******* buffer not allocated :-(, some info bpp=%ld \n ", amiga_image_bpp);
+		}
 
 		rp = My_Window->RPort;
 
 		UserMsg = My_Window->UserPort;
 
 	MutexRelease(window_mx);
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	// CyberIDAttr only works with CGX ID, however on MorphOS there are only CGX Screens
 	// Anyway, it's easy to check, so lets do it... - Piru
@@ -769,30 +813,20 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		return -1;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
- 	if (PrepareBuffer(in_format, IMGFMT_BGR32) < 0) 
+ 	if (PrepareBuffer(in_format, gfx_common_rgb_format == RGBFB_A8R8G8B8 ? IMGFMT_BGR32 : IMGFMT_RGB24 ) < 0) 
 	{
 		uninit();
 		return -1;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	vo_draw_alpha_func = draw_alpha_rgb32;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	gfx_Start(My_Window);
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 #ifdef CONFIG_GUI
     if (use_gui)
 		guiGetEvent(guiSetWindowPtr, (char *) My_Window);
 #endif
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	return 0; // -> Ok
 }
@@ -806,13 +840,24 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 	uint8_t *dst[3];
   	int dstStride[3];
 
+
+
 	MutexObtain( window_mx );
 
-	dstStride[0] = amiga_image_width*amiga_image_bpp;
+	if (( amiga_image_width != w )&&(x==0) )
+	{
+		printf("%d,%d,%d,%d,%d\n",amiga_image_width,w,h,x,y);
+
+		if (output_ri.Memory) { FreeVec(output_ri.Memory); output_ri.Memory = NULL; }
+		alloc_output_buffer( w, h );
+	}
+
+
+	dstStride[0] = org_amiga_image_width*amiga_image_bpp;
 	dstStride[1] = 0;
 	dstStride[2] = 0;
 
-	dst[0] = (uint8_t *) ( (ULONG) amiga_image_buffer +x*amiga_image_bpp) ;
+	dst[0] = (uint8_t *) ( (ULONG) output_ri.Memory +x*amiga_image_bpp) ;
 	dst[1] = NULL;
 	dst[2] = NULL; 
 
@@ -841,6 +886,8 @@ static void flip_page(void)
 	struct RastPort rp;
 	int ww,wh;
 
+	benchmark_frame_cnt ++;
+
 	if ((My_Window)&&(the_bitmap))
 	{
 		ww = My_Window->Width - My_Window->BorderLeft - My_Window->BorderRight;
@@ -848,14 +895,17 @@ static void flip_page(void)
 	
 		if ((ww==amiga_image_width)&&(wh==amiga_image_height))	// no scaling so we dump it into the window.
 		{
-			WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	My_Window -> RPort,My_Window->BorderLeft,My_Window->BorderTop,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
+			if (gfx_novsync==FALSE) WaitTOF();
+			p96WritePixelArray( &output_ri, 0, 0, My_Window -> RPort, My_Window->BorderLeft,My_Window->BorderTop, amiga_image_width,amiga_image_height);
 		}
 		else
 		{
 			InitRastPort(&rp);
 			rp.BitMap = the_bitmap;
-			WritePixelArray(amiga_image_buffer,0,0,amiga_image_width*amiga_image_bpp,	&rp,0,0,amiga_image_width,amiga_image_height,RECTFMT_ARGB);
 
+			p96WritePixelArray( &output_ri, 0, 0, &rp, 0,0, amiga_image_width,amiga_image_height);
+
+			if (gfx_novsync==FALSE) WaitTOF();
 			if (is_fullscreen)	// do it fast
 			{
 				draw_comp( the_bitmap,My_Window, amiga_image_width,amiga_image_height);
@@ -933,10 +983,10 @@ static void FreeGfx(void)
 	rp = NULL;
 
 	if (the_bitmap) { FreeBitMap(the_bitmap); 	the_bitmap = NULL; }
-	if (amiga_image_buffer)
+	if (output_ri.Memory)
 	{
 		dprintf("%s:%ld -- Free image buffer here\n",__FUNCTION__,__LINE__);
-		FreeVec(amiga_image_buffer);	amiga_image_buffer = NULL;
+		FreeVec(output_ri.Memory);	output_ri.Memory = NULL;
 	}
 
 	if (inner_bitmap) { FreeBitMap(inner_bitmap);  inner_bitmap = NULL; }
@@ -949,9 +999,16 @@ static void FreeGfx(void)
 /******************************** UNINIT    ******************************************/
 static void uninit(void)
 {
+	unsigned long long int microsec;	
 
 
-//	Printf("%s:%ld -- Task 0x%08lx\n",__FUNCTION__,__LINE__, FindTask(NULL));
+	gettimeofday(&after,&dontcare);		// to get time after
+	microsec = (after.tv_usec - before.tv_usec) +(1000000 * (after.tv_sec - before.tv_sec));
+
+	printf("Internal COMP FPS %0.00f\n",(float)  benchmark_frame_cnt / (float) (microsec / 1000 / 1000) );
+
+
+	benchmark_frame_cnt = 0;
 
 dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
 	FreeGfx();
@@ -972,9 +1029,11 @@ static int control(uint32_t request, void *data, ...)
 	switch (request) 
 	{
 		case VOCTRL_GUISUPPORT:
+
 			return VO_TRUE;
 
 		case VOCTRL_FULLSCREEN:
+
 			is_fullscreen ^= VOFLAG_FULLSCREEN;
 			FreeGfx();
 			if ( config(org_amiga_image_width, org_amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;
@@ -984,17 +1043,20 @@ static int control(uint32_t request, void *data, ...)
 
 			gfx_Stop(My_Window);
 			if (rp) InstallLayerHook(rp->Layer, &BackFill_Hook);
+
 			gfx_ControlBlanker(My_Screen, TRUE);
 
 			is_paused = is_paused ? FALSE : TRUE;
 
 			BackFill_Func( My_Window -> RPort, NULL );
-
 			return VO_TRUE;					
 
 		case VOCTRL_RESUME:
+
 			gfx_Start(My_Window);
-			if (rp) InstallLayerHook(rp->Layer, &BackFill_Hook);
+
+			if (rp) InstallLayerHook(rp->Layer, NULL );
+
 			gfx_ControlBlanker(My_Screen, FALSE);
 
 			is_paused = is_paused ? FALSE : TRUE;
