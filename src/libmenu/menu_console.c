@@ -321,7 +321,7 @@ static int run_shell_cmd(menu_t* menu, char* cmd) {
 	   }
 	   Close(out);
    }
-   DeleteFile("T:mplayer_cmd_output");
+   Delete("T:mplayer_cmd_output");
   }
 #elif !defined(__MINGW32__)
   int in[2],out[2],err[2];
