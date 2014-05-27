@@ -139,6 +139,7 @@ char PubScreenName[128] = "";
 #define DISAPBORDER			2
 #define ALWAYSBORDER		3
 ULONG gfx_BorderMode = ALWAYSBORDER;
+BOOL gfx_novsync = FALSE;
 
 // Timer for the pointer...
 ULONG p_mics1=0, p_mics2=0, p_secs1=0, p_secs2=0;
@@ -174,6 +175,7 @@ struct MsgPort *awport;
 struct AppWindow *appwin;
 ULONG  appwinsig, appid = 1, appuserdata = 0;
 
+ULONG gfx_common_rgb_format = RGBFB_A8R8G8B8; 
 uint32_t   amiga_image_width;            // well no comment
 uint32_t   amiga_image_height;
 
@@ -184,16 +186,16 @@ static struct Gadget MyDragGadget =
 	NULL,
 	0,0,								// Pos
 	0,0,								// Size
-	0,									// Flags
-	0,									// Activation
-	GTYP_WDRAGGING,						// Type
-	NULL,								// GadgetRender
-	NULL,								// SelectRender
-	NULL,								// GadgetText
-	0L,									// Obsolete
-	NULL,								// SpecialInfo
-	0,									// Gadget ID
-	NULL								// UserData
+	0,								// Flags
+	0,								// Activation
+	GTYP_WDRAGGING,					// Type
+	NULL,							// GadgetRender
+	NULL,							// SelectRender
+	NULL,							// GadgetText
+	0L,								// Obsolete
+	NULL,							// SpecialInfo
+	0,								// Gadget ID
+	NULL							// UserData
 };
 
 static struct Gadget MySizeGadget =
@@ -201,16 +203,16 @@ static struct Gadget MySizeGadget =
 	NULL,
 	0,0,								// Pos
 	0,0,								// Size
-	0,									// Flags
-	0,									// Activation
+	0,								// Flags
+	0,								// Activation
 	GTYP_SIZING ,		 				// Type
-	NULL,								// GadgetRender
-	NULL,								// SelectRender
-	NULL,								// GadgetText
-	0L,									// Obsolete
-	NULL,								// SpecialInfo
-	0,									// Gadget ID
-	NULL								// UserData
+	NULL,							// GadgetRender
+	NULL,							// SelectRender
+	NULL,							// GadgetText
+	0L,								// Obsolete
+	NULL,							// SpecialInfo
+	0,								// Gadget ID
+	NULL							// UserData
 };
 
 /****************************/
@@ -281,6 +283,9 @@ BOOL gfx_GiveArg(const char *arg)
 			else if (strncasecmp(PtrArg, "TINYBORDER", strlen("TINYBORDER")) == 0 ) gfx_BorderMode = TINYBORDER;
 			else if (strncasecmp(PtrArg, "ALWAYSBORDER", strlen("ALWAYSBORDER") ) == 0 ) gfx_BorderMode = ALWAYSBORDER;
 			else if (strncasecmp(PtrArg, "DISAPBORDER", strlen("DISAPBORDER") ) == 0 ) gfx_BorderMode = DISAPBORDER;
+			else if (strncasecmp(PtrArg, "RGB", strlen("RGB")) ==0 ) gfx_common_rgb_format  = RGBFB_R8G8B8;
+			else if (strncasecmp(PtrArg, "ARGB", strlen("ARGB")) == 0 ) gfx_common_rgb_format = RGBFB_A8R8G8B8;
+			else if (strncasecmp(PtrArg, "NOVSYNC", strlen("NOVSYNC")) == 0 ) gfx_novsync = TRUE;
 
 #ifdef CONFIG_GUI
 			if(use_gui && mygui->embedded) /* Check modes supported by GUI */
@@ -380,7 +385,7 @@ void UpdateGadgets(struct Window * My_Window, int WindowWidth, int WindowHeight)
 {
 	MyDragGadget.LeftEdge = (WORD) 0;
 	MyDragGadget.TopEdge  = (WORD) 0;
-	MyDragGadget.Width 	  = (WORD) WindowWidth-10;
+	MyDragGadget.Width   = (WORD) WindowWidth-10;
 	MyDragGadget.Height   = (WORD) 30;
 
 	// But do not say if this func can fail (or give the error return code
@@ -389,7 +394,7 @@ void UpdateGadgets(struct Window * My_Window, int WindowWidth, int WindowHeight)
 
 	MySizeGadget.LeftEdge = (WORD) WindowWidth-10;
 	MySizeGadget.TopEdge  = (WORD) 0;
-	MySizeGadget.Width 	  = (WORD) 10;
+	MySizeGadget.Width   = (WORD) 10;
 	MySizeGadget.Height   = (WORD) WindowHeight;
 
 	// But do not say if this func can fail (or give the error return code
@@ -600,7 +605,7 @@ if(!use_gui)
 					{
 						rate = (float) amiga_image_width /  (float) amiga_image_height;
 						w = *window_width;
-						h = (LONG)  ((float) *window_width / rate);
+						h = (ULONG)  ((float) *window_width / rate);
 
 						if (My_Screen)
 						{
@@ -609,9 +614,12 @@ if(!use_gui)
 							if (h > (My_Screen -> Height - My_Window -> BorderTop - My_Window ->BorderBottom))
 							{
 								h = My_Screen -> Height - My_Window -> BorderTop - My_Window ->BorderBottom;
-								w = (LONG)  ((float) h * rate);
+								w = (ULONG)  ((float) h * rate);
 							}
 						}
+
+						if (h<50) h=50;
+						if (w<50) w=50;
 
 						if (h !=  *window_height)
 						{
