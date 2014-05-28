@@ -17,12 +17,17 @@ test $version || version=$svn_revision
 
 NEW_REVISION="#define VERSION \"${version}${extra}\""
 OLD_REVISION=$(head -n 1 version.h 2> /dev/null)
-TITLE='#define MP_TITLE "%s "VERSION" (C) 2000-2010 MPlayer Team\n"'
+
+AMIGA_VERSION=5.5
+TITLE='#define MP_TITLE "%s LiveForIt V'$AMIGA_VERSION' - "VERSION"(C) 2000-2010 MPlayer Team\n"'
+
+AMIGA_VERSION='#define AMIGA_VERSION "LiveForIt-MPlayer '$AMIGA_VERSION' ('`date +"%d"`.$((`date +"%m"`)).`date +"%Y"`')"'
 
 # Update version.h only on revision changes to avoid spurious rebuilds
-if test "$NEW_REVISION" != "$OLD_REVISION"; then
+#if test "$NEW_REVISION" != "$OLD_REVISION"; then
     cat <<EOF > version.h
 $NEW_REVISION
+$AMIGA_VERSION
 $TITLE
 EOF
-fi
+#fi
