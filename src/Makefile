@@ -343,7 +343,7 @@ SRCS_COMMON = asxparser.c \
               mp_msg.c \
               mpcommon.c \
               parser-cfg.c \
-              get_path_amigaos.c \
+              amigaos/get_path.c \
               playtree.c \
               playtreeparser.c \
               subopt-helper.c \
