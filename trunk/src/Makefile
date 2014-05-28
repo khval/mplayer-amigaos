@@ -1017,7 +1017,8 @@ TAGS:
 tags:
 	rm -f $@; find . -name '*.[chS]' -o -name '*.asm' | xargs ctags -a
 
-
+amigaos/amigaos_stuff.o: version.h
+	gcc -c amigaos/amigaos_stuff.c -o amigaos/amigaos_stuff.o -I./ -D__USE_INLINE__
 
 ###### tests / tools #######
 

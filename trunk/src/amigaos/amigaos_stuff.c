@@ -28,11 +28,9 @@
 #include "arexx.h"
 /* ARexx */
 
-#ifndef __AMIGAOS4__
-#include <proto/alib.h>
-#else
+
 #include <clib/alib_protos.h>
-#endif
+
 #include <proto/icon.h>
 #include <proto/dos.h>
 #include <proto/wb.h>
@@ -54,7 +52,7 @@
 #include "mp_msg.h"
 #include "amigaos_stuff.h"
 
-const char version[] = "$VER: MPlayer for AmigaOS4 " VERSION ;
+const char version[] = "$VER: " AMIGA_VERSION ;
 const char STACK[] __attribute((used))   = "$STACK: 5000000";
 
 extern char *SCREENSHOTDIR;
