@@ -176,7 +176,8 @@ SRCS_COMMON-$(LIBMPEG2_INTERNAL)     += libmpeg2/alloc.c \
                                         libmpeg2/idct.c \
                                         libmpeg2/motion_comp.c \
                                         libmpeg2/slice.c \
-                                        $(SRCS_LIBMPEG2-INTERNAL-yes)
+                                        libmpeg2/idct_altivec.c \
+                                        libmpeg2/motion_comp_altivec.c
 
 SRCS_COMMON-$(LIBNEMESI)             += libmpdemux/demux_nemesi.c \
                                         stream/stream_nemesi.c
@@ -616,7 +617,13 @@ SRCS_MPLAYER-$(NAS)           += libao2/ao_nas.c
 SRCS_MPLAYER-$(NETWORKING)    += udp_sync.c
 SRCS_MPLAYER-$(OPENAL)        += libao2/ao_openal.c
 SRCS_MPLAYER-$(OSS)           += libao2/ao_oss.c
+SRCS_MPLAYER-$(AHI)           += libao2/ao_ahi.c libao2/ao_ahi_dev.c 
 SRCS_MPLAYER-$(PNM)           += libvo/vo_pnm.c
+
+SRCS_MPLAYER-$(CGX)           += libvo/vo_cgx_wpa.c libvo/cgx_common.c
+# Yes I know should be $(COMP) but it's not cleansed from CGX yet..
+SRCS_MPLAYER-$(CGX)           += libvo/vo_comp.c 
+
 SRCS_MPLAYER-$(P96PIP)        += libvo/vo_p96pip.c
 SRCS_MPLAYER-$(PULSE)         += libao2/ao_pulse.c
 SRCS_MPLAYER-$(QUARTZ)        += libvo/vo_quartz.c libvo/osx_common.c
@@ -674,8 +681,8 @@ SRCS_MPLAYER = command.c \
                mixer.c \
                mp_fifo.c \
                mplayer.c \
-               MPlayer-arexx.c \
-               amigaos_stuff.c \
+               amigaos/arexx.c \
+               amigaos/amigaos_stuff.c \
                parser-mpcmd.c \
                pnm_loader.c \
                input/input.c \
@@ -856,7 +863,7 @@ mencoder$(EXESUF): EXTRALIBS += $(EXTRALIBS_MENCODER)
 mplayer$(EXESUF): $(MPLAYER_DEPS)
 mplayer$(EXESUF): EXTRALIBS += $(EXTRALIBS_MPLAYER)
 mencoder$(EXESUF) mplayer$(EXESUF):
-	$(CC) -o $@ $^ $(EXTRALIBS)
+	$(CC) -o $@  $^  $(EXTRALIBS) 
 
 codec-cfg$(EXESUF): codec-cfg.c codec-cfg.h help_mp.h
 	$(HOST_CC) -O -DCODECS2HTML -I. -Iffmpeg -o $@ $<
