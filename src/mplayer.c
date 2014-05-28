@@ -156,7 +156,7 @@
 #endif
 
 #ifdef __amigaos4__
-#include "amigaos_stuff.h"
+#include "amigaos/amigaos_stuff.h"
 char *SCREENSHOTDIR = "RAM:";
 #endif
 
@@ -367,10 +367,6 @@ static int crash_debug = 0;
 
 /* This header requires all the global variable declarations. */
 #include "cfg-mplayer.h"
-
-#ifdef __amigaos4__
-#include "MPlayer-rxget.c"
-#endif
 
 const void *mpctx_get_video_out(MPContext *mpctx)
 {

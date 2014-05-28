@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #include "input/input.h"
-#include "MPlayer-arexx.h"
+#include "arexx.h"
 #include "mp_msg.h"
 
 #undef USE_LOCAL_AREXX_GET
