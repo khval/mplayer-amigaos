@@ -22,6 +22,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <proto/dos.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +53,8 @@ static const vo_info_t info =
 };
 
 const LIBVO_EXTERN (png)
+
+static int is_init = 0;
 
 static int z_compression;
 static char *png_outdir;
@@ -195,12 +199,25 @@ query_format(uint32_t format)
 }
 
 static void uninit(void){
-    avcodec_close(avctx);
-    av_freep(&avctx);
-    av_freep(&outbuffer);
-    outbuffer_size = 0;
-    free(png_outdir);
-    png_outdir = NULL;
+
+	if (is_init)
+	{
+		Printf("uninit\n");
+
+		avcodec_close(avctx);
+		av_freep(&avctx);
+		av_freep(&outbuffer);
+
+		outbuffer_size = 0;
+		if (png_outdir) free(png_outdir);
+		png_outdir = NULL;
+	}
+	else
+	{
+		Printf("error uninit more then once\n");
+	}
+
+	is_init = 0;	
 }
 
 static void check_events(void){}
@@ -232,6 +249,9 @@ static int preinit(const char *arg)
         uninit();
         return -1;
     }
+
+	is_init = 1;
+
     avctx->compression_level = z_compression;
     return 0;
 }
