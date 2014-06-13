@@ -28,6 +28,8 @@
 #include "arexx.h"
 /* ARexx */
 
+static struct Task *current_task;
+
 
 #include <clib/alib_protos.h>
 
@@ -52,7 +54,8 @@
 #include "mp_msg.h"
 #include "amigaos_stuff.h"
 
-const char version[] = "$VER: " AMIGA_VERSION ;
+const char version[] = "$VER: " AMIGA_VERSION " " VERSION ;
+//const char version[] = "$VER: AMIGA_VERSION 1.1 (10.1.2014) VERSION ";
 const char STACK[] __attribute((used))   = "$STACK: 5000000";
 
 extern char *SCREENSHOTDIR;
@@ -215,6 +218,8 @@ void AmigaOS_ParseArg(int argc, char *argv[], int *new_argc, char ***new_argv)
 	{
 		return ; // We never know !
 	}
+
+
 
 	if (Cli())
 	{
@@ -573,6 +578,11 @@ int AmigaOS_Open(int argc, char *argv[])
 
 	IIntuition_SDL_workaround = IIntuition;	// save IIntuition as SDL sets this to NULL :-(
 
+	Forbid();
+	current_task = FindTask(NULL);
+	Permit();
+
+	if (current_task) SetTaskPri(current_task,1);
 
 #ifdef CONFIG_AHI
 //	open_ahi();
