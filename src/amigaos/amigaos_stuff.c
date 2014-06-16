@@ -14,6 +14,7 @@
 #define dprintf(...) 
 #endif
 
+APTR pr_WindowPtr;
 
 #include <exec/types.h>
 #include <proto/timer.h>
@@ -373,6 +374,14 @@ void AmigaOS_Close(void)
 {
 	IIntuition = IIntuition_SDL_workaround;
 
+
+
+	Forbid();
+	current_task = FindTask(NULL);
+	((struct Process *) current_task) -> pr_WindowPtr = pr_WindowPtr;			// enable insert disk.
+	Permit();
+
+
 	if (OldPtr)
 	{
 		//SetTaskPri(p,0);
@@ -580,10 +589,12 @@ int AmigaOS_Open(int argc, char *argv[])
 
 	Forbid();
 	current_task = FindTask(NULL);
+	pr_WindowPtr = ((struct Process *) current_task) -> pr_WindowPtr;
+	((struct Process *) current_task) -> pr_WindowPtr = -1L;			// Disable insert disk.
 	Permit();
-
+/*
 	if (current_task) SetTaskPri(current_task,1);
-
+*/
 #ifdef CONFIG_AHI
 //	open_ahi();
 #endif
