@@ -112,9 +112,10 @@ struct RenderInfo output_ri;
 static uint32_t   org_amiga_image_width;            // well no comment
 static uint32_t   org_amiga_image_height;
 
-extern uint32_t   amiga_image_width;            // well no comment
-extern uint32_t   amiga_image_height;
-static uint32_t   amiga_image_bpp;            	// image bpp
+extern uint32_t	amiga_image_width;            // well no comment
+extern uint32_t	amiga_image_height;
+extern float		amiga_aspect_ratio;
+static uint32_t		amiga_image_bpp;            	// image bpp
 
 void 	alloc_output_buffer( ULONG width, ULONG height )
 {
@@ -129,7 +130,6 @@ void 	alloc_output_buffer( ULONG width, ULONG height )
 	output_ri.Memory = AllocVec( output_ri.BytesPerRow * height+2 , MEMF_CLEAR);
 
 }
-
 
 
 void draw_comp_bitmap(struct BitMap *the_bitmap,struct BitMap *the_bitmap_dest, int width,int height, int wx,int wy,int ww, int wh)
@@ -324,19 +324,34 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 	struct RenderInfo ri;
 	uint32 BMLock;
 
-	if (output_ri.RGBFormat == RGBFB_A8R8G8B8)
-	{
-		vo_draw_alpha_rgb32(w,h,src,srca,
-			stride,
-			(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
-	}
-	else
-	{
-		vo_draw_alpha_rgb24(w,h,src,srca,
-			stride,
-			(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
-	}
+	vo_draw_alpha_rgb32(w,h,src,srca,
+		stride,
+		(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
+
+
 }
+
+static void draw_alpha_rgb24 (int x0,int y0, int w,int h, unsigned char* src, unsigned char * srca, int stride)
+{
+	struct RenderInfo ri;
+	uint32 BMLock;
+
+	vo_draw_alpha_rgb24(w,h,src,srca,
+		stride,
+		(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
+}
+
+static void draw_alpha_rgb16 (int x0,int y0, int w,int h, unsigned char* src, unsigned char * srca, int stride)
+{
+	struct RenderInfo ri;
+	uint32 BMLock;
+
+	vo_draw_alpha_rgb16(w,h,src,srca,
+		stride,
+		(UBYTE *) ( (ULONG) output_ri.Memory + (y0*output_ri.BytesPerRow)+(x0*amiga_image_bpp) ), output_ri.BytesPerRow );
+}
+
+
 
 
 /******************************** PREINIT ******************************************/
@@ -731,6 +746,7 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 {
 	ULONG ModeID = INVALID_ID;
 	uint32 BMLock;
+	uint32 fmt;
 
 	if (My_Window) return 0;
 
@@ -739,21 +755,24 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 
 	amiga_image_format = in_format; 
 
-	// backup info
-	if (gfx_common_rgb_format ==RGBFB_A8R8G8B8)
+
+	switch (gfx_common_rgb_format )
 	{
-		amiga_image_bpp = 4;
+		case RGBFB_A8R8G8B8:	amiga_image_bpp = 4;	break;
+		case RGBFB_R8G8B8: amiga_image_bpp = 3;	break;
+		case RGBFB_R5G6B5: amiga_image_bpp = 2; 	break;
+		default: 
+			amiga_image_bpp = 4;
 	}
-	else
-	{
-		amiga_image_bpp = 3;
-	}
+
 
 	org_amiga_image_width = width;
 	org_amiga_image_height =height;
 
 	amiga_image_width = width & -16;
 	amiga_image_height = height ;
+
+	amiga_aspect_ratio = (float) d_width /  (float) d_height;
 
 	window_width = d_width ;
 	window_height = d_height;
@@ -790,7 +809,7 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 			FreeBitMap(the_bitmap);
 		}
 
-		the_bitmap = AllocBitMap( amiga_image_width , amiga_image_height, gfx_common_rgb_format == RGBFB_A8R8G8B8 ? 32 : 24, BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
+		the_bitmap = AllocBitMap( amiga_image_width , amiga_image_height,  32 , BMF_DISPLAYABLE, My_Window ->RPort -> BitMap);
 
 		alloc_output_buffer( org_amiga_image_width, org_amiga_image_height );
 
@@ -805,21 +824,30 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 
 	MutexRelease(window_mx);
 
-	// CyberIDAttr only works with CGX ID, however on MorphOS there are only CGX Screens
-	// Anyway, it's easy to check, so lets do it... - Piru
-	if ( ! IsCyberModeID(ModeID) ) 
+	switch (gfx_common_rgb_format )
+	{
+		case RGBFB_A8R8G8B8:	
+			vo_draw_alpha_func = draw_alpha_rgb32;
+			fmt = IMGFMT_BGR32; 
+			break;
+		case RGBFB_R8G8B8:
+			vo_draw_alpha_func = draw_alpha_rgb24;
+			fmt = IMGFMT_RGB24; 
+			break;
+		case RGBFB_R5G6B5: 
+			vo_draw_alpha_func = draw_alpha_rgb16;
+			fmt = IMGFMT_BGR16; 
+			break;
+		default: 	fmt = IMGFMT_BGR32; break;
+	}
+
+ 	if (PrepareBuffer(in_format, fmt ) < 0) 
 	{
 		uninit();
 		return -1;
 	}
 
- 	if (PrepareBuffer(in_format, gfx_common_rgb_format == RGBFB_A8R8G8B8 ? IMGFMT_BGR32 : IMGFMT_RGB24 ) < 0) 
-	{
-		uninit();
-		return -1;
-	}
 
-	vo_draw_alpha_func = draw_alpha_rgb32;
 
 	gfx_Start(My_Window);
 
@@ -895,7 +923,7 @@ static void flip_page(void)
 	
 		if ((ww==amiga_image_width)&&(wh==amiga_image_height))	// no scaling so we dump it into the window.
 		{
-			if (gfx_novsync==FALSE) WaitTOF();
+//			if (gfx_novsync==FALSE) WaitTOF();
 			p96WritePixelArray( &output_ri, 0, 0, My_Window -> RPort, My_Window->BorderLeft,My_Window->BorderTop, amiga_image_width,amiga_image_height);
 		}
 		else
@@ -905,7 +933,7 @@ static void flip_page(void)
 
 			p96WritePixelArray( &output_ri, 0, 0, &rp, 0,0, amiga_image_width,amiga_image_height);
 
-			if (gfx_novsync==FALSE) WaitTOF();
+//			if (gfx_novsync==FALSE) WaitTOF();
 			if (is_fullscreen)	// do it fast
 			{
 				draw_comp( the_bitmap,My_Window, amiga_image_width,amiga_image_height);
@@ -1001,13 +1029,12 @@ static void uninit(void)
 {
 	unsigned long long int microsec;	
 
-
-	gettimeofday(&after,&dontcare);		// to get time after
-	microsec = (after.tv_usec - before.tv_usec) +(1000000 * (after.tv_sec - before.tv_sec));
-
-	printf("Internal COMP FPS %0.00f\n",(float)  benchmark_frame_cnt / (float) (microsec / 1000 / 1000) );
-
-
+	if (benchmark_frame_cnt>0)
+	{
+		gettimeofday(&after,&dontcare);		// to get time after
+		microsec = (after.tv_usec - before.tv_usec) +(1000000 * (after.tv_sec - before.tv_sec));
+		printf("Internal COMP FPS %0.00f\n",(float)  benchmark_frame_cnt / (float) (microsec / 1000 / 1000) );
+	}
 	benchmark_frame_cnt = 0;
 
 dprintf("%s:%ld - rp is 0x%08lx \n",__FUNCTION__,__LINE__,rp);
