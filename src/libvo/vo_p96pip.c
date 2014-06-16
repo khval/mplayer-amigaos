@@ -88,13 +88,15 @@ static void FreeGfx(void);
 struct Screen *My_Screen;
 struct Window *My_Window;
 
-extern uint32 amiga_image_width;
-extern uint32 amiga_image_height;
+extern uint32		amiga_image_width;
+extern uint32		amiga_image_height;
+extern float		amiga_aspect_ratio;
 
 ULONG window_width = 0;
 ULONG window_height =0;
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
+
 
 static BOOL FirstTime = TRUE;
 
@@ -425,15 +427,15 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	if (Stopped==TRUE || My_Window)
 		FreeGfx();
 		
-	ratio = (float)d_width/(float)d_height;
+	amiga_aspect_ratio = (float) d_width /  (float) d_height;
 
 	if (d_width<MIN_WIDTH || d_height<MIN_HEIGHT)
 	{
-		d_width = MIN_WIDTH * ratio;
-		d_height = MIN_HEIGHT * ratio;
+		d_width = MIN_WIDTH * amiga_aspect_ratio;
+		d_height = MIN_HEIGHT * amiga_aspect_ratio;
 	}
 	//else
-	//	d_height = d_width / ratio;
+	//	d_height = d_width / amiga_aspect_ratio;
 
 	if (old_d_width==0 || old_d_height==0)
 	{

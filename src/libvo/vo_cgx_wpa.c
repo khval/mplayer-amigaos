@@ -98,6 +98,8 @@ static uint32_t   window_height;          // can be different from the image
 static uint32_t   screen_width;           // Indicates the size of the screen in full screen
 static uint32_t   screen_height;          // Only use for triple buffering
 
+extern float amiga_aspect_ratio;
+
 extern uint32_t	is_fullscreen;
 
 extern UWORD *EmptyPointer;               // Blank pointer
@@ -563,6 +565,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	image_height = height & -2;
 	window_width = d_width & -8;
 	window_height = d_height & -2;
+
+	amiga_aspect_ratio = (float) d_width /  (float) d_height;
 
 	if ( is_fullscreen )
 	{
