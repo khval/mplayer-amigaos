@@ -59,6 +59,8 @@
 #include <devices/scsidisk.h>
 #include "amiga_scsi.h"
 
+extern int AmigaOS_DoIO( ULONG i_fd, ULONG cmd, void *data, ULONG size);
+
 // Will require a bit more stack space but we have expande it do 512Kb
 static UBYTE Global_SCSISense[SENSE_LEN];
 #endif
@@ -280,7 +282,6 @@ int ioctl_ReadCopyright( int i_fd, int i_layer, int *pi_copyright )
     *pi_copyright = p_buffer[ 4 ];
 
 #elif defined (__amigaos4__)
-    struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
     UBYTE buffer[8];
     struct SCSICmd MySCSICmd;
 
@@ -294,12 +295,6 @@ int ioctl_ReadCopyright( int i_fd, int i_layer, int *pi_copyright )
     command.b9 = 8;
     command.b7 = DVD_STRUCT_COPYRIGHT;
 
-    //WaitIO( (struct IORequest *)IOReq );
-
-    IOReq->io_Command    = HD_SCSICMD;
-    IOReq->io_Data       = &MySCSICmd;
-    IOReq->io_Length     = sizeof(struct SCSICmd);
-
     MySCSICmd.scsi_Data 		= (UWORD *) buffer;
     MySCSICmd.scsi_Length		= 8;
     MySCSICmd.scsi_SenseActual 	= 0;
@@ -309,11 +304,10 @@ int ioctl_ReadCopyright( int i_fd, int i_layer, int *pi_copyright )
     MySCSICmd.scsi_CmdLength	= sizeof(SCSICMD12);
     MySCSICmd.scsi_Flags		= SCSIF_READ | SCSIF_AUTOSENSE;
 
-    DoIO( (struct IORequest *)IOReq );
+    i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd)) ? - 1: 0;
 
     *pi_copyright = buffer[ 4 ];
 
-    i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -488,7 +482,6 @@ int ioctl_ReadDiscKey( int i_fd, int *pi_agid, uint8_t *p_key )
     memcpy( p_key, p_buffer + 4, DVD_DISCKEY_SIZE );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
    UBYTE buffer[ DVD_DISCKEY_SIZE + 4];
    struct SCSICmd MySCSICmd;
 
@@ -503,12 +496,6 @@ int ioctl_ReadDiscKey( int i_fd, int *pi_agid, uint8_t *p_key )
    command.b9 = (DVD_DISCKEY_SIZE + 4) & 0xff;
    command.b10 = *pi_agid << 6;
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = DVD_DISCKEY_SIZE + 4;
    MySCSICmd.scsi_SenseActual = 0;
@@ -518,11 +505,10 @@ int ioctl_ReadDiscKey( int i_fd, int *pi_agid, uint8_t *p_key )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd)) ? -1 : 0;
 
    memcpy( p_key, buffer + 4, DVD_DISCKEY_SIZE );
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -688,7 +674,7 @@ int ioctl_ReadTitleKey( int i_fd, int *pi_agid, int i_pos, uint8_t *p_key )
     memcpy( p_key, p_buffer + 5, DVD_KEY_SIZE );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[12];
    struct SCSICmd MySCSICmd;
 
@@ -705,12 +691,6 @@ int ioctl_ReadTitleKey( int i_fd, int *pi_agid, int i_pos, uint8_t *p_key )
    command.b9 = 12;
    command.b10 = DVD_REPORT_TITLE_KEY | (*pi_agid << 6);
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 12;
    MySCSICmd.scsi_SenseActual = 0;
@@ -720,11 +700,10 @@ int ioctl_ReadTitleKey( int i_fd, int *pi_agid, int i_pos, uint8_t *p_key )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd)) ? -1 : 0;
 
    memcpy( p_key, buffer + 5, DVD_KEY_SIZE );
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -850,7 +829,7 @@ int ioctl_ReportAgid( int i_fd, int *pi_agid )
     *pi_agid = p_buffer[ 7 ] >> 6;
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[8];
    struct SCSICmd MySCSICmd;
 
@@ -862,12 +841,6 @@ int ioctl_ReportAgid( int i_fd, int *pi_agid )
    command.b9 = 8;
    command.b10 = DVD_REPORT_AGID | (*pi_agid << 6);
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 8;
    MySCSICmd.scsi_SenseActual = 0;
@@ -877,11 +850,10 @@ int ioctl_ReportAgid( int i_fd, int *pi_agid )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+	i_ret = AmigaOS_DoIO( i_fd , HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 
    *pi_agid = buffer[ 7 ] >> 6;
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1017,7 +989,7 @@ int ioctl_ReportChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
     memcpy( p_challenge, p_buffer + 4, DVD_CHALLENGE_SIZE );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[16];
    struct SCSICmd MySCSICmd;
 
@@ -1029,12 +1001,6 @@ int ioctl_ReportChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
    command.b9 = 16;
    command.b10 =  DVD_REPORT_CHALLENGE | (*pi_agid << 6);
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 16;
    MySCSICmd.scsi_SenseActual = 0;
@@ -1044,11 +1010,10 @@ int ioctl_ReportChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd , HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 
    memcpy( p_challenge, buffer + 4, DVD_CHALLENGE_SIZE );
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1183,7 +1148,7 @@ int ioctl_ReportASF( int i_fd, int *pi_remove_me, int *pi_asf )
     *pi_asf = p_buffer[ 7 ] & 1;
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[8];
    struct SCSICmd MySCSICmd;
 
@@ -1195,12 +1160,6 @@ int ioctl_ReportASF( int i_fd, int *pi_remove_me, int *pi_asf )
    command.b9 = 8;
    command.b10 =  DVD_REPORT_ASF;
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 8;
    MySCSICmd.scsi_SenseActual = 0;
@@ -1210,11 +1169,10 @@ int ioctl_ReportASF( int i_fd, int *pi_remove_me, int *pi_asf )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 
    *pi_asf = buffer[ 7 ] & 1;
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1345,7 +1303,6 @@ int ioctl_ReportKey1( int i_fd, int *pi_agid, uint8_t *p_key )
     memcpy( p_key, p_buffer + 4, DVD_KEY_SIZE );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
    UBYTE buffer[12];
    struct SCSICmd MySCSICmd;
 
@@ -1357,12 +1314,6 @@ int ioctl_ReportKey1( int i_fd, int *pi_agid, uint8_t *p_key )
    command.b9 = 12;
    command.b10 =  DVD_REPORT_KEY1 | (*pi_agid << 6);
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 12;
    MySCSICmd.scsi_SenseActual = 0;
@@ -1372,11 +1323,10 @@ int ioctl_ReportKey1( int i_fd, int *pi_agid, uint8_t *p_key )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret =AmigaOS_DoIO( i_fd,  HD_SCSICMD,  &MySCSICmd,  sizeof(struct SCSICmd) ) ? -1 : 0;
 
    memcpy( p_key, buffer + 4, DVD_KEY_SIZE );
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1489,7 +1439,6 @@ int ioctl_InvalidateAgid( int i_fd, int *pi_agid )
                         &sdc, sizeof(sdc), &ulParamLen,
                         NULL, 0, &ulDataLen);
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
    struct SCSICmd MySCSICmd;
 
    SCSICMD12 command;
@@ -1500,12 +1449,6 @@ int ioctl_InvalidateAgid( int i_fd, int *pi_agid )
    command.b9 = 0;
    command.b10 =   DVD_INVALIDATE_AGID | (*pi_agid << 6);
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = NULL;
    MySCSICmd.scsi_Length	   = 0;
    MySCSICmd.scsi_SenseActual = 0;
@@ -1515,9 +1458,8 @@ int ioctl_InvalidateAgid( int i_fd, int *pi_agid )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1656,7 +1598,7 @@ int ioctl_SendChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
                          p_buffer, sizeof(p_buffer), &ulDataLen );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[16];
    struct SCSICmd MySCSICmd;
    SCSICMD12 command;
@@ -1671,12 +1613,6 @@ int ioctl_SendChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
    buffer[ 1 ] = 0xe;
    memcpy( buffer + 4, p_challenge, DVD_CHALLENGE_SIZE );
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = (APTR)&MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 		   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 16; //16
    MySCSICmd.scsi_SenseActual      = 0;
@@ -1686,11 +1622,11 @@ int ioctl_SendChallenge( int i_fd, int *pi_agid, uint8_t *p_challenge )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags		   = SCSIF_WRITE | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 
-   i_ret = IOReq->io_Error ? -1 : 0;
+//   if (i_ret)  printf("Error getbuskey: %d\n", IOReq->io_Error);
+   if (i_ret)  printf("Error getbuskey:\nIOReq->io_error can't be displayed sorry\nshould poke a array\n");
 
-   if (i_ret)  printf("Error getbuskey: %d\n", IOReq->io_Error);
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -1829,7 +1765,7 @@ int ioctl_SendKey2( int i_fd, int *pi_agid, uint8_t *p_key )
                          p_buffer, sizeof(p_buffer), &ulDataLen );
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[12];
    struct SCSICmd MySCSICmd;
 
@@ -1844,12 +1780,6 @@ int ioctl_SendKey2( int i_fd, int *pi_agid, uint8_t *p_key )
    buffer[ 1 ] = 0xa;
    memcpy( buffer + 4, p_key, DVD_KEY_SIZE );
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 12;
    MySCSICmd.scsi_SenseActual = 0;
@@ -1859,9 +1789,7 @@ int ioctl_SendKey2( int i_fd, int *pi_agid, uint8_t *p_key )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_WRITE | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
-
-   i_ret = IOReq->io_Error ? -1 : 0;
+   i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd) ) ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -2018,7 +1946,7 @@ int ioctl_ReportRPC( int i_fd, int *p_type, int *p_mask, int *p_scheme )
     *p_scheme = p_buffer[ 6 ];
 
 #elif defined (__amigaos4__)
-   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
    UBYTE buffer[12];
    struct SCSICmd MySCSICmd;
 
@@ -2030,12 +1958,6 @@ int ioctl_ReportRPC( int i_fd, int *p_type, int *p_mask, int *p_scheme )
    command.b9 = 12;
    command.b10 =   DVD_REPORT_RPC;
 
-   //WaitIO( (struct IORequest *)IOReq );
-
-   IOReq->io_Command    = HD_SCSICMD;
-   IOReq->io_Data       = &MySCSICmd;
-   IOReq->io_Length     = sizeof(struct SCSICmd);
-
    MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
    MySCSICmd.scsi_Length	   = 12;
    MySCSICmd.scsi_SenseActual = 0;
@@ -2045,13 +1967,12 @@ int ioctl_ReportRPC( int i_fd, int *p_type, int *p_mask, int *p_scheme )
    MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
    MySCSICmd.scsi_Flags			   = SCSIF_READ | SCSIF_AUTOSENSE;
 
-   DoIO( (struct IORequest *)IOReq );
+    i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd)) ? - 1: 0;
 
    *p_type = buffer[ 4 ] >> 6;
    *p_mask = buffer[ 5 ];
    *p_scheme = buffer[ 6 ];
 
-   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 
@@ -2180,7 +2101,7 @@ int ioctl_SendRPC( int i_fd, int i_pdrc )
                          p_buffer, sizeof(p_buffer), &ulDataLen );
 
 #elif defined (__amigaos4__)
-	   struct IOStdReq *IOReq = (struct IOStdReq *) i_fd;
+
 	   UBYTE buffer[8];
 	   struct SCSICmd MySCSICmd;
 
@@ -2195,11 +2116,6 @@ int ioctl_SendRPC( int i_fd, int i_pdrc )
 	   buffer[ 1 ] = 6;
 	   buffer[ 4 ] = i_pdrc;
 
-	   //WaitIO( (struct IORequest *)IOReq );
-
-	   IOReq->io_Command    = HD_SCSICMD;
-	   IOReq->io_Data       = &MySCSICmd;
-	   IOReq->io_Length     = sizeof(struct SCSICmd);
 
 	   MySCSICmd.scsi_Data 			   = (UWORD *) buffer;
 	   MySCSICmd.scsi_Length	   = 8;
@@ -2210,9 +2126,8 @@ int ioctl_SendRPC( int i_fd, int i_pdrc )
 	   MySCSICmd.scsi_CmdLength	   = sizeof(SCSICMD12);
 	   MySCSICmd.scsi_Flags			   = SCSIF_WRITE | SCSIF_AUTOSENSE;
 
-	   DoIO( (struct IORequest *)IOReq );
+	    i_ret = AmigaOS_DoIO( i_fd, HD_SCSICMD, &MySCSICmd, sizeof(struct SCSICmd)) ? - 1: 0;
 
-	   i_ret = IOReq->io_Error ? -1 : 0;
 #else
 #   error "DVD ioctls are unavailable on this system"
 

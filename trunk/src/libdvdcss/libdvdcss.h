@@ -32,8 +32,9 @@ struct iovec;
 
 #if defined(__amigaos4__) || defined(__MORPHOS__)
 // Needed for MsgPort and IORequest
-#include <exec/ports.h>
-#include <exec/io.h>
+#include <proto/exec.h>
+//include <exec/ports.h>
+//include <exec/io.h>
 #endif
 
 /*****************************************************************************
@@ -68,7 +69,7 @@ struct dvdcss_s
     int    b_errors;
     int    b_debug;
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__amigaos4__)
     int    b_file;
     char * p_readv_buffer;
     int    i_readv_buf_size;
@@ -79,8 +80,13 @@ struct dvdcss_s
 #endif
 
 #if defined(__amigaos4__) || defined(__MORPHOS__)
-   struct MsgPort *  DVD_MsgPort;
-   struct IOStdReq * DVD_IOReq;
+   struct Task * CurrentTask;
+   struct Process * Process;
+   char device_name[100];
+   uint32 device_unit;
+   void (*hook)  ( struct IOStdReq * DVD_IOReq, ULONG **args);
+   ULONG args[3];
+   int ret;
    APTR DVD_BufPtr;
    APTR DVD_Buffer;
 #endif
