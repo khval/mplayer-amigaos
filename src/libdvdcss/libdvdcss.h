@@ -84,7 +84,7 @@ struct dvdcss_s
    struct Process * Process;
    char device_name[100];
    uint32 device_unit;
-   void (*hook)  ( struct IOStdReq * DVD_IOReq, ULONG **args);
+   void (*hook)  ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args);
    ULONG args[3];
    int ret;
    APTR DVD_BufPtr;
