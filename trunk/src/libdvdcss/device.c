@@ -53,7 +53,12 @@
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <devices/newstyle.h>
+
+extern struct DebugIFace *IDebug;
+
 #endif
+
+//typedef char off_t;
 
 #if defined( WIN32 ) && !defined( SYS_CYGWIN )
 #   include <io.h>                                                 /* read() */
@@ -87,6 +92,11 @@
 #include "ioctl.h"
 #include "device.h"
 
+//--becnhmark--
+static struct timezone dontcare = { 0,0 };
+static struct timeval before, after;
+static int bytes;
+
 /*****************************************************************************
  * Device reading prototypes
  *****************************************************************************/
@@ -106,24 +116,105 @@ static int libc_readv ( dvdcss_t, struct iovec *, int );
 static uint32 local_fd = 0;
 static dvdcss_t local_dvdcss = NULL;
 
-LONG evil_buffer_pos = -1;
-void *evil_buffer = NULL;
-#define evil_buffer_size  1
-#define evil_buffer_mask  (evil_buffer_size-1)
+#define evil_buffer_blocks 14
+#define evil_buffer_size  (DVDCSS_BLOCK_SIZE*evil_buffer_blocks)
+
+int64	evil_buffer_pos = -666;
+void		*evil_buffer = NULL;
+int		evil_result[ evil_buffer_blocks ];
+
+static int read_from_buffer( dvdcss_t dvdcss, void *to_mem );
+
+/*
+	This is your hook function which will be called for each
+	stack frame. Always check the State field before processing
+	any stack frame.
+*/
+
+static int32 printStack(struct Hook *hook, struct Task *task, struct StackFrameMsg *frame);
+
+int32 printStack(struct Hook *hook, struct Task *task, struct StackFrameMsg *frame)
+{
+	struct DebugSymbol *symbol = NULL;
 
 
-static int hook(  void (*fn) ( struct IOStdReq * DVD_IOReq, ULONG **args ), dvdcss_t dvdcss,ULONG arg1, ULONG arg2, ULONG arg3 );
+	switch (frame->State)
+	{
+	    case STACK_FRAME_DECODED:
+
+
+		if (symbol = IDebug->ObtainDebugSymbol(frame->MemoryAddress, NULL))
+		{
+			Printf("%s : %s\n", symbol -> Name, 
+				symbol->SourceFunctionName ? symbol->SourceFunctionName : "NULL");
+			IDebug->ReleaseDebugSymbol(symbol);
+		}
+		else
+		{
+			Printf("(%p) -> %p\n", frame->StackPointer, frame->MemoryAddress);
+		}
+
+		break;
+
+	    case STACK_FRAME_INVALID_BACKCHAIN_PTR:
+		Printf("(%p) invalid backchain pointer\n",  frame->StackPointer);
+		break;
+
+	    case STACK_FRAME_TRASHED_MEMORY_LOOP:
+		Printf("(%p) trashed memory loop\n", frame->StackPointer);
+	     	break;
+
+	    case STACK_FRAME_BACKCHAIN_PTR_LOOP:
+		Printf("(%p) backchain pointer loop\n",frame->StackPointer);
+		break;
+
+	    default:
+		Printf("Unknown state=%lu\n", frame->State);
+	}
+
+	return 0;  // Continue tracing.
+}
+
+
+void dump_stack()
+{
+	int n=0;
+	struct Task *task;
+
+	n =n + 1 % 2000;
+	if (n == 0) return;
+
+	Printf("Stack:\n");
+	
+	if (task = local_dvdcss -> CurrentTask)
+	{
+		struct Hook *hook = AllocSysObjectTags(ASOT_HOOK,ASOHOOK_Entry, printStack, TAG_END);
+
+		if (hook != NULL)
+		{
+			SuspendTask(task, 0);
+			IDebug->StackTrace(task, hook);
+			RestartTask(task, 0);
+			FreeSysObject(ASOT_HOOK, hook);
+		}
+	}
+}
+
+
+static int hook(  void (*fn) ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args ), dvdcss_t dvdcss,uint64 arg1, uint64 arg2, uint64 arg3 );
 
 static int amiga_open  ( dvdcss_t dvdcss, char const * device_name);
 static void amiga_close(dvdcss_t dvdcss);
-static void amiga_seek  ( struct IOStdReq * DVD_IOReq, ULONG **args );
-static void amiga_read  ( struct IOStdReq * DVD_IOReq, ULONG **args );
-static void amiga_readv ( struct IOStdReq * DVD_IOReq, ULONG **args );
+static void amiga_seek  ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args );
+static void amiga_read  ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args );
+static void amiga_readv ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args );
 
 void StopDVDReader(dvdcss_t dvdcss);
 int StartDVDReader(dvdcss_t dvdcss );
 
-static void _AmigaOS_DoIO( struct IOStdReq * DVD_IOReq, ULONG **args  );
+static void _AmigaOS_DoIO( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args  );
+
+static void evil_reader( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq,ULONG *args);
 
 int AmigaOS_DoIO( ULONG i_fd, ULONG cmd, void *data, ULONG size)
 {	
@@ -137,14 +228,126 @@ static int _amiga_seek ( dvdcss_t dvdcss, int pos)
 
 static int _amiga_read ( dvdcss_t dvdcss, void *data, int blocks )
 {
-	return hook( amiga_read , dvdcss, (ULONG) data, blocks ,0 );
+//	return hook( amiga_read , dvdcss, (ULONG) data, blocks ,0 );
+
+	if (blocks == 1)
+	{
+		if ( read_from_buffer( dvdcss, data )>0)
+		{
+			return 1;
+		}
+	}
+
+	return hook( evil_reader , dvdcss, (ULONG) data, blocks ,0 );
 }
 
 static int _amiga_readv ( dvdcss_t dvdcss, struct iovec *iovec, int blocks)
 {
 	printf("*** readv **** %d, %d ****\n", iovec, blocks);
-	return hook( amiga_readv , dvdcss, iovec, blocks, 0 );
+	return hook( amiga_readv , dvdcss, (ULONG) iovec, blocks, 0 );
 }
+
+static int hook(  void (*fn) ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args ), dvdcss_t dvdcss,uint64 arg1, uint64 arg2, uint64 arg3 )
+{
+	dvdcss -> CurrentTask = FindTask(NULL);  // find caller task/process.
+
+	dvdcss -> args[0] = arg1;
+	dvdcss -> args[1] = arg2;
+	dvdcss -> args[2] = arg3;
+	dvdcss -> hook = fn;
+	Signal( &dvdcss -> Process->pr_Task, SIGBREAKF_CTRL_D );
+	Wait(SIGF_CHILD);		// Wait for child process to signal its done.
+	return dvdcss -> ret;
+}
+
+// prefetch buffer maybe...
+
+static int read_from_buffer( dvdcss_t dvdcss, void *to_mem )
+{
+	int64 offset = dvdcss->i_pos % evil_buffer_blocks;
+	int64 i_pos = dvdcss->i_pos - offset;
+
+	if (evil_buffer_pos == i_pos)
+	{
+		if (evil_result[offset]>0)  
+		{
+			CopyMem( (void *)  (((ULONG) evil_buffer) + (ULONG) ( offset * DVDCSS_BLOCK_SIZE)), (void *) to_mem, DVDCSS_BLOCK_SIZE );
+			dvdcss -> i_pos ++;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static void evil_reader( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq,ULONG *args)
+{
+	struct dvdcss_s private_dvdcss;
+	ULONG send_args[3];
+	ULONG offset;
+	ULONG n =0;
+
+	if ((args[1] != 1)||(dvdcss->i_pos < 0))
+	{
+		amiga_read( dvdcss, DVD_IOReq, args );
+		return;
+	}
+
+	// get offeste and pos.
+	
+	offset = dvdcss->i_pos % evil_buffer_blocks;
+	private_dvdcss.i_pos = dvdcss->i_pos - offset;
+
+	if (evil_buffer_pos == private_dvdcss.i_pos)
+	{
+		// if prefetch buffer has vaild data return quick.
+		if (evil_result[offset]>0)  
+		{
+			CopyMem( (void *)  (((ULONG) evil_buffer) + (ULONG) ( offset * DVDCSS_BLOCK_SIZE)), (void *) args[0], DVDCSS_BLOCK_SIZE );
+			dvdcss -> i_pos ++;
+			dvdcss -> ret = 1;
+			return;
+		}
+	}
+	else
+	{
+		for (n=0;n<evil_buffer_blocks;n++) 	evil_result[ n ] = -1;
+	}
+
+	// make private copy.
+	CopyMem(dvdcss, &private_dvdcss, sizeof(struct dvdcss_s));
+	// restore pos after CopyMem.
+
+	offset = dvdcss->i_pos % evil_buffer_blocks;
+	private_dvdcss.i_pos = dvdcss->i_pos - offset;
+
+	send_args[0] = (ULONG) evil_buffer;
+	send_args[1] = evil_buffer_blocks;
+	amiga_read( &private_dvdcss, DVD_IOReq, send_args );
+
+	if  (evil_result[ n ]==-1)
+	{
+		for (n=0;n<evil_buffer_blocks;n++) evil_result[n] = -1;
+	}
+	else
+	{
+		for (n=0;n<evil_buffer_blocks;n++) evil_result[n] = 1;
+	}
+
+	evil_buffer_pos = dvdcss->i_pos - offset;
+	dvdcss -> ret = evil_result[ offset ];
+
+	if (evil_result[ offset ] > -1)
+	{
+		CopyMem( (void *) (((ULONG) evil_buffer) + (ULONG) (offset * DVDCSS_BLOCK_SIZE )), (void *) args[0], DVDCSS_BLOCK_SIZE );
+		dvdcss -> i_pos ++;
+	}
+	else
+	{
+		dvdcss -> i_pos=-1;
+	}
+}
+
 
 #endif
 
@@ -1194,8 +1397,10 @@ static int amiga_open  ( dvdcss_t dvdcss, char const * device_name)
 	int success = -1;
 	int sectors = (sizeof(struct MySCSICmd) + DVDCSS_BLOCK_SIZE + 31) * NUM_SECTORS;
 
+	Printf("evil buffer size: %ld - block size %ld\n", DVDCSS_BLOCK_SIZE * (evil_buffer_size+2), DVDCSS_BLOCK_SIZE);
+
 	evil_buffer_pos = -1;
-	evil_buffer = AllocVec( DVDCSS_BLOCK_SIZE * evil_buffer_size, MEMF_SHARED | MEMF_CLEAR );
+	evil_buffer = AllocVec( DVDCSS_BLOCK_SIZE * (evil_buffer_size+2), MEMF_SHARED | MEMF_CLEAR );
 
 	dvdcss -> Process = NULL;
 	dvdcss->DVD_BufPtr = AllocVec(sectors, MEMF_SHARED | MEMF_CLEAR );
@@ -1242,22 +1447,63 @@ static void amiga_close(dvdcss_t dvdcss)
 }
 
 /*****************************************************/
-static void amiga_seek  ( struct IOStdReq * DVD_IOReq , ULONG **args)
+
+/*
+static int libc_seek( dvdcss_t dvdcss, int i_blocks )
 {
-	int blocks =  local_dvdcss -> args[0] ;
+    off_t   i_seek;
 
-//	Printf("%s:%d\n",__FUNCTION__,__LINE__);
+    if( dvdcss->i_pos == i_blocks )
+    {
+        // We are already in position 
+        return i_blocks;
+    }
 
-	   if (local_dvdcss->i_pos != blocks)
-	   {
-		   local_dvdcss->i_pos = blocks;
-		   read_sector(DVD_IOReq, blocks, 1, local_dvdcss->DVD_Buffer, local_dvdcss->DVD_BufPtr);
-	   }
-	   local_dvdcss -> ret = blocks;
+    i_seek = (off_t)i_blocks * (off_t)DVDCSS_BLOCK_SIZE;
+    i_seek = lseek( dvdcss->i_read_fd, i_seek, SEEK_SET );
+
+    if( i_seek < 0 )
+    {
+        print_error( dvdcss, "seek error" );
+        dvdcss->i_pos = -1;
+        return i_seek;
+    }
+
+    dvdcss->i_pos = i_seek / DVDCSS_BLOCK_SIZE;
+
+    return dvdcss->i_pos;
 }
+*/
 
+static void amiga_seek  ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq , ULONG *args)
+{
+	int i_blocks =  args[0] ;		// +/- pos
 
+	if (dvdcss->i_pos == i_blocks)
+	{
+		dvdcss -> ret = i_blocks;
+		return;
+	}
 
+	if ( !read_sector(DVD_IOReq,i_blocks , 1, dvdcss->DVD_Buffer, dvdcss->DVD_BufPtr) )
+	{
+		dvdcss->i_pos = -1;
+		dvdcss -> ret = -1;
+		return ;
+	}
+
+	// can't seek to negative pos
+	if (i_blocks<0)
+	{
+     		print_error( dvdcss, "seek error" );
+		dvdcss->i_pos = -1;
+		dvdcss -> ret = i_blocks * DVDCSS_BLOCK_SIZE;
+		return;
+	}
+
+	dvdcss->i_pos = i_blocks;
+	dvdcss -> ret = i_blocks;
+}
 
 
 /*****************************************************/
@@ -1265,103 +1511,50 @@ static void amiga_seek  ( struct IOStdReq * DVD_IOReq , ULONG **args)
 static BOOL read_sector_scsi (struct IOStdReq *My_IOStdReq, ULONG start_block, ULONG block_count, UBYTE *Data, struct MySCSICmd *MySCSI);
 
 
-static void amiga_read  ( struct IOStdReq * DVD_IOReq, ULONG **args )
+static int amiga_read_first_time = 1;
+static uint64 amiga_read_time = 0;
+static uint64 amiga_read_bytes = 0;
+
+int amiga_read_cnt = 0;
+
+
+static void amiga_read  ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args )
 {
-	void *p_buffer = local_dvdcss -> args[0];
-	int blocks = local_dvdcss -> args[1];
-		ULONG src;
-	ULONG des;
+	void *p_buffer = (void *) args[0];
+	int blocks =  args[1];
 
-	if (!evil_buffer) return;
-
-	if (blocks==-999)
+	if ( !read_sector(DVD_IOReq,dvdcss->i_pos , blocks, p_buffer, dvdcss->DVD_BufPtr) )
 	{
-		ULONG bigblock =  local_dvdcss->i_pos & ~evil_buffer_mask;
-		ULONG subblock = 	local_dvdcss->i_pos & evil_buffer_mask;
-
-		printf("%ld, %ld, %ld\n",bigblock, subblock, local_dvdcss->i_pos);
-
-		if (bigblock != evil_buffer_pos )
-		{
-//			src = (ULONG) evil_buffer;
-			src = (((ULONG) evil_buffer) + (ULONG) (subblock * DVDCSS_BLOCK_SIZE));
-
-//			if ( !read_sector(DVD_IOReq,bigblock, 1, src, local_dvdcss->DVD_BufPtr) )
-			if ( !read_sector(DVD_IOReq,bigblock, evil_buffer_size, evil_buffer, local_dvdcss->DVD_BufPtr) )
-			{
-				Printf("%s:%ld args %ld, %ld\n",__FUNCTION__,__LINE__, local_dvdcss->i_pos, local_dvdcss -> args[1]);
-					Printf("error\n");
-					local_dvdcss->i_pos = -1;
-					local_dvdcss -> ret = -1;
-					evil_buffer_pos = -1;
-					return ;
-
-			}
-			else
-			{
-				evil_buffer_pos = bigblock;
-			}
-		}
-		CopyMem( src, p_buffer, DVDCSS_BLOCK_SIZE );
-	}
-	else
-	{
-		if ( !read_sector(DVD_IOReq,local_dvdcss->i_pos , blocks, p_buffer, local_dvdcss->DVD_BufPtr) )
-		{
-		Printf("%s:%ld args %ld, %ld\n",__FUNCTION__,__LINE__, local_dvdcss->i_pos, local_dvdcss -> args[1]);
-			Printf("error\n");
-			local_dvdcss->i_pos = -1;
-			local_dvdcss -> ret = -1;
-			return ;
-
-		}
-	}
-
-	local_dvdcss->i_pos += blocks;
-	local_dvdcss -> ret = blocks;
-}
-
-
-
-static void amiga_read_  ( struct IOStdReq * DVD_IOReq, ULONG **args )
-{
-	void *p_buffer = local_dvdcss -> args[0];
-	int blocks = local_dvdcss -> args[1];
-
-
-
-	if ( !read_sector(DVD_IOReq,local_dvdcss->i_pos , blocks, p_buffer, local_dvdcss->DVD_BufPtr) )
-	{
-	Printf("%s:%ld args %ld, %ld\n",__FUNCTION__,__LINE__, local_dvdcss->i_pos, local_dvdcss -> args[1]);
+		Printf("%s:%ld args %ld, %ld\n",__FUNCTION__,__LINE__, dvdcss->i_pos, dvdcss -> args[1]);
 		Printf("error\n");
-		local_dvdcss->i_pos = -1;
-		return -1;
-
+		dvdcss->i_pos = -1;
+		dvdcss -> ret = -1;
+		return ;
 	}
-	local_dvdcss->i_pos += blocks;
-	local_dvdcss -> ret = blocks;
+
+	dvdcss->i_pos += blocks;
+	dvdcss -> ret = blocks;
 }
 
 
-static void _AmigaOS_DoIO( struct IOStdReq * DVD_IOReq, ULONG **args  )
+static void _AmigaOS_DoIO( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args  )
 {
-	DVD_IOReq->io_Command	= local_dvdcss->args[0];
-	DVD_IOReq->io_Data		= local_dvdcss->args[1];
-	DVD_IOReq->io_Length		= local_dvdcss->args[2];
+	DVD_IOReq->io_Command	= args[0];
+	DVD_IOReq->io_Data		= (void *) args[1];
+	DVD_IOReq->io_Length		= args[2];
 
 	DoIO((struct IORequest *) DVD_IOReq);
 
-	local_dvdcss-> ret = DVD_IOReq->io_Error;
+	dvdcss-> ret = DVD_IOReq->io_Error;
 }
-
 
 
 /*****************************************************/
 
-static void amiga_readv  ( struct IOStdReq * DVD_IOReq,  ULONG **args )
+static void amiga_readv ( dvdcss_t dvdcss, struct IOStdReq * DVD_IOReq, ULONG *args )
 {
-	struct iovec *p_iovec = local_dvdcss -> args[0];
-	int i_blocks = local_dvdcss -> args[1];
+	struct iovec *p_iovec = (struct iovec *)  args[0];
+	int i_blocks = args[1];
 	int i_index;
 	int i_blocks_read, i_blocks_total = 0;
 
@@ -1402,17 +1595,21 @@ static void amiga_readv  ( struct IOStdReq * DVD_IOReq,  ULONG **args )
 
 	Printf("%s:%ld\n", __FUNCTION__,__LINE__);
 
-    if( i_blocks_total <= 0 ) return 0;
+	if( i_blocks_total <= 0 ) 
+	{
+		dvdcss -> ret = -1;
+		return;
+	}
 
 	i_blocks_total /= DVDCSS_BLOCK_SIZE;
 
-	local_dvdcss->args[0] = local_dvdcss->p_readv_buffer;
-	local_dvdcss->args[1] = i_blocks_total;
+	dvdcss->args[0] = (ULONG) local_dvdcss->p_readv_buffer;
+	dvdcss->args[1] = i_blocks_total;
 
 	Printf("%s:%ld\n", __FUNCTION__,__LINE__);
 
-	amiga_read( DVD_IOReq , local_dvdcss->args);
-	i_blocks_read = local_dvdcss-> ret;
+	amiga_read( dvdcss, DVD_IOReq , local_dvdcss->args);
+	i_blocks_read = dvdcss-> ret;
 
 
 	Printf("%s:%ld\n", __FUNCTION__,__LINE__);
@@ -1442,19 +1639,17 @@ static void amiga_readv  ( struct IOStdReq * DVD_IOReq,  ULONG **args )
         i_blocks_total -= ( p_iovec[i_index].iov_len / DVDCSS_BLOCK_SIZE );
     }
 
-    local_dvdcss->i_pos += i_blocks_read;
+    dvdcss->i_pos += i_blocks_read;
 
-    local_dvdcss -> ret = i_blocks_read;
+    dvdcss -> ret = i_blocks_read;
 }
 
 
 
 /*****************************************************/
-static BOOL read_sector (struct IOStdReq *IOStdReq, ULONG start_block, ULONG block_count, UBYTE *data, struct MySCSICmd *MySCSI)
+static BOOL read_sector(struct IOStdReq *IOStdReq, ULONG start_block, ULONG block_count, UBYTE *data, struct MySCSICmd *MySCSI)
 {
 	long long int offset = (long long int) start_block * (long long int) DVDCSS_BLOCK_SIZE;
-
-	ULONG src;
 
 	IOStdReq->io_Command = NSCMD_TD_READ64;
 	IOStdReq->io_Actual = offset >> 32;
@@ -1471,7 +1666,6 @@ static BOOL read_sector (struct IOStdReq *IOStdReq, ULONG start_block, ULONG blo
 	}
 	
 	return TRUE;
-
 }
 
 
@@ -1533,7 +1727,6 @@ void DVDReader()
 	struct MsgPort *  DVD_MsgPort = NULL;
 	struct IOStdReq * DVD_IOReq ;
 	uint32 rsigs;
-	ULONG args[3];
 	struct Message *msg;
 
 	Printf("DVD reader says hello\n");
@@ -1592,6 +1785,7 @@ void DVDReader()
 
 	if (local_dvdcss -> ret == 0)
 	{
+
 		Printf("all ok now, we can continue\n");
 		Signal( local_dvdcss -> CurrentTask, SIGF_CHILD ); // every thing worked fine, so lets inform main program.
 
@@ -1604,7 +1798,8 @@ void DVDReader()
 
 			if (rsigs & SIGBREAKF_CTRL_D)
 			{
-				local_dvdcss -> hook(DVD_IOReq, args );
+//				dump_stack();
+				local_dvdcss -> hook(local_dvdcss, DVD_IOReq,  (ULONG *) local_dvdcss -> args );
 				Signal( local_dvdcss -> CurrentTask, SIGF_CHILD );
 			}
 
@@ -1633,26 +1828,11 @@ void DVDReader()
 
 	if (DVD_MsgPort) FreeSysObject(ASOT_PORT,DVD_MsgPort);
 
-	// Just need some time to read text output.
-	Delay(5);
 
 	// last thing to do wait up main task.
 	Signal( local_dvdcss -> CurrentTask, SIGF_CHILD );
 }
 
-static int hook(  void (*fn) ( struct IOStdReq * DVD_IOReq, ULONG *args[3] ), dvdcss_t dvdcss,ULONG arg1, ULONG arg2, ULONG arg3 )
-{
-	dvdcss -> CurrentTask = FindTask(NULL);  // find caller task/process.
-
-	dvdcss -> args[0] = arg1;
-	dvdcss -> args[1] = arg2;
-	dvdcss -> args[2] = arg3;
-	dvdcss -> hook = fn;
-	Signal( &dvdcss -> Process->pr_Task, SIGBREAKF_CTRL_D );
-	Wait(SIGF_CHILD);		// Wait for child process to signal its done.
-
-	return dvdcss -> ret;
-}
 
 int StartDVDReader(dvdcss_t dvdcss )
 {

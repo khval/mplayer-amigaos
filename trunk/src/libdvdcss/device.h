@@ -61,4 +61,10 @@ int  _dvdcss_close      ( dvdcss_t );
 int _dvdcss_raw_open     ( dvdcss_t, char const * );
 #endif
 
+#ifdef __amigaos4__
+int AmigaOS_DoIO( ULONG i_fd, ULONG cmd, void *data, ULONG size);
+#endif
+
 #endif /* DVDCSS_DEVICE_H */
+
+
