@@ -1,0 +1,243 @@
+LiveForIt-Mplayer V6.4
+
+LiveForIt-Mplayer was created because there was a need for a mplayer optimized for 
+RadeonHD as it does not have overlay support, (and support G4 and PA6T with AltiVec)
+the first version gave you vo_comp, bitmaps with hardware scaling, 
+allot of work as been put into fixing bugs in AREXX, initiation and shutdown
+code for AmigaOS, to make it better product.
+
+The 6.x version gives you yet again a new video output comp_yuv and comp_yuv2, 
+this video modes have support yuv420p bitmaps rendered and scaled by the GPU.
+this also have support for DRI short for direct rendering.
+
+To use this modes you need AmigaOS4.1 Final and latest RadeonHD 4.2 drivers,
+if not it will fall back on comp or cgx_wpa video outputs, and mplayer will run slowly.
+
+This MPlayer is based on work by many developers, some of the names:
+Ka1e, Kjetil Hvalstrand, Andrea Palmate, Fabien Coeurjoly, Jörg strohmayer, 
+DET Nicolas, Diego Biurrum, Felix Bunemann, Ryan C. Fordon and many more
+
+Disclamer: 
+This open source project we who work on this project for AmigaOS, are not making
+a liveing improvineg this code, this project is not paying for expenses, developers 
+who work on mplayer does so when they like to, and what they like to do. We have
+NOT signed a contract nor to deliver feature X, nor have we agreed to a bounty. 
+If you donate you do so because you like what developer has done, not because
+you think he should do this or that in the future. 
+Some developers are good at some things, some are good at other things,
+we do what we know how to.
+
+Any problems you have should be reported to bug tracker:
+http://code.google.com/p/mplayer-amigaos/issues/list
+
+Other issues and things you like to rapport can done in the forum:
+http://www.amigans.net/modules/xforum/viewtopic.php?topic_id=6460&forum=3
+
+Beta testing: 
+Samo76, K-L (Mehdi), Severin, Tommy Sammy. Mike Brantly.
+Jean-François Bachelet, Sinan Gürkan, David Aiau, Nick Clover,
+Anthony Bandiera, Sinan Gurkan
+
+Thanks to every one has benchmarked for me: 
+Tlosm (Luigi), mr2.
+
+Thanks to all who have donated: 
+Helge, Harkku, Thomas, Trevor, Thomas, Kaprnh, Michael
+Matthew, Karsten, BAL Xavier, Kevin, Julian, Boulahia, Ole-Egil.
+Guillaume, Krister, Richard.
+
+And thanks to Michael T. for some help.
+
+Version 6.4 (Mplayer 1.1.1)
+
+* Removed debug output from 
+	stream.c, cache2.c, mplayer.c, vo_comp_yuv2.c, vo_comp_yuv.
+
+* Formated some text in:
+	ao_ahi_dev.c
+
+* Replaced video output PIP with P96_pip video output.
+
+* Fixed OSD for CGX_WPA.
+
+* Fixed SDL video output, window mode now is default.
+
+* Added NODMA and NODRI option for COMP_YUV2 and COMP_YUV.
+
+* Fixed a bug in COMP_YUV, colors where not copied correct, 
+	If the picture was drawn by 16 pixels slices of the height,
+	(y offset was ignored), insted of by frame or DRI.
+
+* Fixed ARexx dead lock issue (for MplayerGUI).
+
+Version 6.3 (Mplayer 1.1.1)
+
+* Removed GetBitMapAttr( bm, BMA_Width ) does not work with new libs.
+
+* Small changes in codec buffer to ram bitmap copy routines.
+	now use MemCopyQuick() instead of MemCopy().
+
+Version 6.2 (Mplayer 1.1.1)
+
+* Fixed a bug that can crash mplayer when its started in comp_yuv.
+
+* Salved a audio/video sync problem with video by threading comp_yuv,
+	because of the amount of data  needed to process in the page_flip, 
+	pluss the wait for vertical blanker in mplayer slows down the video decoding,
+	mplayer can now use the CPU power it has more efficient, this can result in
+	higher CPU load, but should improve playback on high definition video.
+	new version of comp_yuv is comp_yuv2, I kept the old one for testing.
+	see -vo help, for more info. 
+
+	Note: The extra complexity can make vo look slower on some benchmarks,
+	vc speed should have increased in speed, (but benchmarks are unrealistic 
+	becouse they do more OSD and PAGE_FLIPS then when you run it normally.)
+
+* comp_yuv2 Fixed OSD text rendering bug when video support direct rendering. 
+
+* replaced more of 32bit off_t (offset type) shit by replaceing it with int64_t, 
+	1000 of placed in the code, this should not be needed if the SDK supported 
+	#define _FILE_OFFSET_BITS 64 (please add support for it in the SDK)
+
+	I hope large file support has improved.
+
+* vo_comp is now clean from CyberGfx and Picasso96 stuff, 
+	now only use graphic.library. (Min graphic.library version is now 54, 
+	RectFillColor needs it.)
+
+* DVD: Disabled output window 
+
+* DVD: Removed some silly debug text.
+
+Version 6.1 (Mplayer 1.1.1)
+
+* Comp_yuv: Fixed green line on top of window/screen 
+
+* Fixed problem finding all screen modes.
+
+* Tryed to incress AHI buffer, (hope audio gets better.)
+
+* Rewrote args for video outputs.
+	vo:help now supported.
+
+* fixed support for monitor.
+	vo:monitor=0 is for first monitor, 
+	vo:monitor=1 is for second monitor.
+
+* comp_yuv, comp_yuv & cgx_wpa now respect monitor nr.
+	(Sorry don't think this can be done for overlay PIP / p96_PIP)
+
+* comp_yuv, now respects -monitoraspect command line argument.
+
+* comp_yuv: default monitor aspect is now taken for named public screen, 
+	if your using vo:pubscreen=dopus.1 (in case you have two monitors) 
+	(else its taken from workbench screen, like before)
+
+Version 6.0 (Mplayer 1.1.1)
+
+* Fixed green line on top of videos.
+
+* New MPlayer source code from MplayerHQ
+See MplayerHQ.changelog for more information about changes from HQ.
+(Most impatent replaced AAC codec, no more crashes)
+
+* New FFMPEG 2.2
+See FFMPEG change log for more information.
+
+* Fixed Direct Rendering (DR) support added to comp_yuv, some codecs will use DR, 
+this improve speed by moving less data around, (some problems with subtitles).
+
+* Fixed MPEG codec, so that DR works with interleaved yuv420p bitmaps.
+(MPEG codec expects non interleaved yuv420p bitmaps and check bpr)
+
+* Added Prefetch buffer to prevent inefficiency in device io of AmigaOS.
+(This fixes slow dvd read speed)
+
+* ported AHI_DEV to version 1.1.1, changed timing, and reduced buffer size.
+(done to fix lip sync issue)
+
+Version 5.5 (Mplayer 1.0RC5)
+
+* Comp_yuv.
+Composition with yuv420 bitmap support.
+
+* Fixed -x and -y option to auto scaling works when resizing window.
+
+* comp:argb is now comp:32, comp:rgb is now comp:24.
+Comp:16 exist for 16bit rgb video output (this was just a experiment).
+
+Changes V5.1 (Mplayer 1.0RC5)
+
+* Added support for comp::rgb and comp::argb option, (does not yet work for cgx_wpa)
+* Workaround for SDL bug, program quits fine now.
+* Fix for DSI error when using mplayer with -vo comp::PUBSCREEN=DOPUS.1
+* Uppercase/lowcase now works for video output args
+* Made screen title standard for p96_pip/cgx_wpa/comp
+* Fixed screen Blanker
+* Moved code to center window to gfx_common.c, this effects p96_pip, cgx_wpa and comp 
+* Fixes to get mplayer compiling with newest SDK
+* Fix for ARexx ASync problem
+
+Changes V4.2 (Mplayer 1.0RC5)
+
+* Fixed Arexx GetTimeLength.
+
+Changes V4.1 (Mplayer 1.0RC5)
+
+* Fixed triple buffer in p96_pip
+* Added aspect ratio for windows after resizeing.
+* FIxed ARexx so it works while playing audio files.
+* Fixed ARexx so "Address Mplayer.1;VOLUME 100 ABS" works.
+* Fixed ARexx so you don't get error codes, changed to use result instead.
+* ARexx now you get RC = -3 if command is not found.
+* ARexx HELP now returns all commands Mplayer supports.
+
+Changes V3.1 (Mplayer 1.0RC5)
+
+* FIxed p96 fullscreen
+* Fixed aspect ratio for p96 (boken in my version)
+* Added aspect ratio for vo_comp
+* Copyed "double click" to full-screen event code from old p96_pip to cgx_common.c
+* Center windows when they open first time.
+ 
+Changes V2.1 beta 2 (Mplayer 1.0RC5)
+
+* Fixed mouse buttons, events in vo_p96_pip.
+* Tryed to fix p96 fullscreen
+
+Changes V2.1 (Mplayer 1.0RC5)
+
+* Added mouse wheel support
+* Removed flickering when resizing, fixed to composition is rendered into the window, not on top.
+* ARexx support enabled
+* Fixed bad startup / Exit bug.
+* Renamed some stuff.
+
+Changes V1.1 (Mplayer 1.0RC5)
+
+* Recompiled nonaltivec version.
+
+Changes V1.0 (Mplayer 1.0RC5)
+
+* cgx_wpa has been changed from RGB to ARGB.
+* Fixed som async problem whit cgx_wpa.
+* Added Mutex protection to some parts of code to prevent DSI errors.
+* This version of mplayer use a newer LibPNG then orignal one used by orignal Amiga version.
+* All the library stuff has been moved into amiga_stuff.c
+* Fixed lockup problem when closing mplayer whit out a GUI, missing #ifdef
+* Fixed a problem whit vo_comp where graphic was zoomed in after resizing window.
+* Fixed a problem whit vo_comp because ffmpeg was initialized wrong for this output driver.
+* Purged vo_p96_pip removed all GUI stuff. (a bit broken now, but works, will be fixed in som other version)
+* Renamed pip to p96_pip for compatibility.
+
+Known bugs:
+* AREXX support is not working in this version.
+* vo_p96_pip sucks.
+
+To Do List:
+* investigate the mystery CPU too slow message from AHI DEV.
+* The aspect correction in full screen.
+* Fix full screen and pause for pip.
+
+For older/other changes see this link:
+https://code.google.com/p/mplayer-amigaos/source/list

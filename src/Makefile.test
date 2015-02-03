@@ -1,0 +1,5 @@
+
+objs = libdvdcss/device.o
+
+all:
+	gcc dvdtest.c $(objs) -o dvdtest.exe -lauto -D__USE_INLINE__
