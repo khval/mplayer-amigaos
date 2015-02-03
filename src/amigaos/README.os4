@@ -1,0 +1,127 @@
+LLiveForIt-Mplayer V5.1
+
+Mplayer was created because there was a need for a mplayer optimized for 
+AmigaONE-X1000, this version of Mplayer is fully AltiVec enabled. vo_comp 
+is new video output driver for mplayer, this is the first mplayer to enable
+this new video output driver.
+
+This MPlayer is based on work by many developers, some of the names:
+Ka1e, Kjetil Hvalstrand, Andrea Palmate, Fabien Coeurjoly, Jörg strohmayer, 
+DET Nicolas, Diego Biurrum, Felix Bunemann, Ryan C. Fordon and many more
+
+Disclamer: 
+This open source project we who work on this project for AmigaOS, are not making
+a living improvineg this code, this project is not paying for expenses, developers 
+who work on mplayer does so when they like to, and what they like to do. We have
+NOT signed a contract or to deliver feature X, nor have we agreed to a bounty. 
+If you donate you do so because you like what developer has done, not because
+you think he should do this or that in the future. 
+Some developers are good at some things, some are good at other things,
+we do what we know how to.
+
+Any problems you have should be reported to bug tracker:
+http://code.google.com/p/mplayer-amigaos/issues/list
+
+Other issues and things you like to rapport can done in the forum:
+http://www.amigans.net/modules/xforum/viewtopic.php?topic_id=6460&forum=3
+
+Beta testing: 
+Sami79, K-L (Mehdi), Severin, Tommy Sammy. Mike Brantly.
+
+Thanks to every one has benchmarked for me: 
+Tlosm (Luigi), mr2.
+
+Thanks to all who have donated: 
+Helge, Harkku, Thomas, Trevor, Thomas, Kaprnh, 
+Matthew, Karsten, BAL Xavier, Kevin, Julian.
+
+And thanks to Michael T. for some help.
+
+Changes V6.0
+
+* New mplayer core version 4.2.4
+* New libffmpeg 2.2.4
+* Support for reading DVD from a directory.
+example: mplayer dvd://1 -dvd-device dh0:dvds/mydvd
+* Support for DVD cache
+example: mplayer dvd://1 -dvd-device sb600sata.device:1
+
+Changes V5.5 (beta for AmigaOS4 beta testers only.)
+
+* comp_yuv video output with support for direct video
+
+Changes V5.1
+
+* Added support for comp::rgb and comp::argb option, (does not yet work for cgx_wpa)
+* Workaround for SDL bug, program quits fine now.
+* Fix for DSI error when using mplayer with -vo comp::PUBSCREEN=DOPUS.1
+* Uppercase/lowcase now works for video output args
+* Made screen title standard for p96_pip/cgx_wpa/comp
+* Fixed screen Blanker
+* Moved code to center window to gfx_common.c, this effects p96_pip, cgx_wpa and comp 
+* Fixes to get mplayer compiling with newest SDK
+* Fix for ARexx ASync problem
+
+Changes V4.2
+
+* Fixed Arexx GetTimeLength.
+
+Changes V4.1
+
+* Fixed triple buffer in p96_pip
+* Added aspect ratio for windows after resizeing.
+* FIxed ARexx so it works while playing audio files.
+* Fixed ARexx so "Address Mplayer.1;VOLUME 100 ABS" works.
+* Fixed ARexx so you don't get error codes, changed to use result instead.
+* ARexx now you get RC = -3 if command is not found.
+* ARexx HELP now returns all commands Mplayer supports.
+
+Changes V3.1
+
+* FIxed p96 fullscreen
+* Fixed aspect ratio for p96 (boken in my version)
+* Added aspect ratio for vo_comp
+* Copyed "double click" to full-screen event code from old p96_pip to cgx_common.c
+* Center windows when they open first time.
+ 
+Changes V2.1 beta 2
+
+* Fixed mouse buttons, events in vo_p96_pip.
+* Tryed to fix p96 fullscreen
+
+Changes V2.1
+
+* Added mouse wheel support
+* Removed flickering when resizing, fixed to composition is rendered into the window, not on top.
+* ARexx support enabled
+* Fixed bad startup / Exit bug.
+* Renamed some stuff.
+
+Changes V1.1
+
+* Recompiled nonaltivec version.
+
+Changes V1.0:
+
+* cgx_wpa has been changed from RGB to ARGB.
+* Fixed som async problem whit cgx_wpa.
+* Added Mutex protection to some parts of code to prevent DSI errors.
+* This version of mplayer use a newer LibPNG then orignal one used by orignal Amiga version.
+* All the library stuff has been moved into amiga_stuff.c
+* Fixed lockup problem when closing mplayer whit out a GUI, missing #ifdef
+* Fixed a problem whit vo_comp where graphic was zoomed in after resizing window.
+* Fixed a problem whit vo_comp because ffmpeg was initialized wrong for this output driver.
+* Purged vo_p96_pip removed all GUI stuff. (a bit broken now, but works, will be fixed in som other version)
+* Renamed pip to p96_pip for compatibility.
+
+Known bugs:
+* AREXX support is not working in this version.
+* vo_p96_pip sucks.
+
+To Do List:
+* investigate the mystery CPU too slow message from AHI DEV.
+* The aspect correction in full screen.
+* Fix full screen and pause for pip.
+
+For older/other changes see this link:
+https://code.google.com/p/mplayer-amigaos/source/list
