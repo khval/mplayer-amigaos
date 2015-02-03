@@ -1,0 +1,24 @@
+
+if exists ram:liveforit-mplayer
+	delete ram:liveforit-mplayer all
+endif
+
+makedir ram:liveforit-mplayer
+copy mplayer ram:liveforit-mplayer/mplayer-altivec
+copy conf ram:liveforit-mplayer/conf all
+copy LICENSE ram:liveforit-mplayer
+copy README ram:liveforit-mplayer
+copy README.os4 ram:liveforit-mplayer/AmigaOS4.README
+copy Copyright ram:liveforit-mplayer
+copy changelog ram:liveforit-mplayer/MplayerHQ.changelog
+copy AUTHORS ram:liveforit-mplayer
+
+copy amigaos/icons/doc.info ram:liveforit-mplayer/AUTHORS.info
+copy amigaos/icons/doc.info ram:liveforit-mplayer/LICENSE.info
+copy amigaos/icons/doc.info ram:liveforit-mplayer/README.info
+copy amigaos/icons/doc.info ram:liveforit-mplayer/AmigaOS4.README.info
+copy amigaos/icons/doc.info ram:liveforit-mplayer/Copyright.info
+copy amigaos/icons/doc.info ram:liveforit-mplayer/MplayerHQ.changelog.info
+
+copy amigaos/icons/MPlayer.info ram:liveforit-mplayer.info
+copy /AREXX ram:liveforit-mplayer/ARexx
