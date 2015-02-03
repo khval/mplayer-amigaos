@@ -1,0 +1,7 @@
+list lformat "delete %f%n" all | grep -e [.]o$     > t:clean
+list lformat "delete %f%n" all | grep -e [.]a$     >> t:clean
+
+echo test >> t:clean
+execute t:clean
+delete mplayer
+delete t:clean
