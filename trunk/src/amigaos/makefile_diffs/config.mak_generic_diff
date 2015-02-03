@@ -1,0 +1,59 @@
+44,46c44,46
+< EXTRALIBS          = -Wl,-z,noexecstack -mcrt=newlib -ffast-math   -lpng -lz -ljpeg -lgif -L/SDK/local/newlib/lib -lfreetype -lz -lz -lbz2 -llzo2 -lmad -lvorbis -logg -lspeex -lmpg123 -lopencore-amrnb -lopencore-amrwb -lvpx -lnut     -static -lm -mcrt
+< EXTRALIBS_MPLAYER  =  -lSDL -lfaac -lmp3lame
+< EXTRALIBS_MENCODER =  -lfaac -lmp3lame
+---
+> EXTRALIBS          = -Wl,-z,noexecstack -mcrt=newlib -ffast-math -lpng -lmng -lz -ljpeg -lgif -llcms -L/SDK/local/newlib/lib -lfreetype -lz -lbz2 -llzo2 -lmad -lspeex -lfaad -L/SDK/local/newlib/lib -ltheora -lvorbis -lvorbisenc -logg -lmpg123 -lxvidcore -lopenjpeg -lvpx -lpthread -lnut -lopencore-amrnb -lopencore-amrwb -lpthread -static -lm
+> EXTRALIBS_MPLAYER  =  -lSDL -lfaac -lmp3lame -lauto
+> EXTRALIBS_MENCODER =  -lfaac -lmp3lame -lauto
+56,61d55
+< ARCH_X86 = yes
+< ARCH_IA64 = yes
+< ARCH_SPARC = yes
+< ARCH_ARM = yes
+< ARCH_AVR32 = yes
+< ARCH_SH4 = yes
+63,85c57
+< ARCH_ALPHA = yes
+< ARCH_MIPS = yes
+< ARCH_PA_RISC = yes
+< ARCH_S390 = yes
+< ARCH_S390X = yes
+< ARCH_VAX = yes
+< ARCH_BFIN = yes
+< ARCH_XTENSA = yes
+< ARCH_TOMI = yes
+< ARCH_GENERIC = yes
+< ARCH_X86_32 = yes
+< ARCH_X86_64 = yes
+< ARCH_PPC64 = yes
+< HAVE_ALTIVEC = yes
+< HAVE_MMX = yes
+< HAVE_MMX2 = yes
+< HAVE_AMD3DNOW = yes
+< HAVE_AMD3DNOWEXT = yes
+< HAVE_SSE = yes
+< HAVE_SSE2 = yes
+< HAVE_SSSE3 = yes
+< HAVE_FAST_CMOV = yes
+< HAVE_CMOV = yes
+---
+> 
+87,96d58
+< HAVE_PLD = yes
+< HAVE_ARMV5TE = yes
+< HAVE_ARMV6 = yes
+< HAVE_ARMV6T2 = yes
+< HAVE_ARMVFP = yes
+< HAVE_NEON = yes
+< HAVE_IWMMXT = yes
+< HAVE_MMI = yes
+< HAVE_VIS = yes
+< HAVE_MVI = yes
+134c96
+< DVDNAV_INTERNAL = no
+---
+> DVDNAV_INTERNAL = yes
+271a234,235
+> P96PIP = yes
+> 

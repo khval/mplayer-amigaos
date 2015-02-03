@@ -1,0 +1,8 @@
+# Write your default config options here!
+lavdopts=skiploopfilter=all
+alang=en
+quiet=1
+cache=10000
+#autosync=35
+dvd-device=sb600sata.device:1
+delay=-0.2
