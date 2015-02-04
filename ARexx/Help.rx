@@ -1,0 +1,5 @@
+/*AREXX*/
+options results
+address MPLAYER.1
+Help
+say result

@@ -1,0 +1,5 @@
+/*AREXX*/
+options results
+address MPLAYER.1
+GET_PERCENT_POS
+say result

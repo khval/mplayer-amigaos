@@ -1,0 +1,4 @@
+/*AREXX*/
+options results
+address MPLAYER.1
+VOLUME 25 ABS
