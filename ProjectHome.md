@@ -1,0 +1,1 @@
+This is a port of MPlayer and MEncoder for AmigaOS. AmigaOS 4.x is initially targeted.
