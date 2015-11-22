@@ -45,14 +45,7 @@
 
 #include <proto/Picasso96API.h>
 
-#include <proto/cybergraphics.h>
-#include <cybergraphx/cybergraphics.h>
-
 #include <graphics/gfxbase.h>
-
-#ifdef __morphos__
-#include <devices/rawkeycodes.h>
-#endif
 
 #include <proto/intuition.h>
 //#include <intuition/extensions.h>
@@ -62,28 +55,33 @@
 #include <dos/dostags.h>
 #include <dos/dos.h>
 
+#include <graphics/gfxbase.h>
+
 extern APTR window_mx;
 
 static vo_info_t info =
 {
-#ifdef __morphos__
-	"CyberGraphX video output (WPA)",
-#endif
 #ifdef __amigaos4__
-	"Picasso96 (+CyberGraphX) video output uses WritePixelArray (no window scaling)",
+	"Graphics.library / WritePixelArray (no window scaling)",
+	"wpa",
 #endif
+#if defined (__morphos__) || defined(__amigaos3__)
+	"CyberGraphX video output (WPA)",
 	"cgx_wpa",
+#endif
 	"DET Nicolas",
 	"AmigaOS4 rules da world !"
 };
 
 LIBVO_EXTERN(cgx_wpa)
 
+extern struct Library *GraphicsBase;
 
 static BOOL FirstTime = TRUE;
 
 static struct Window *         My_Window      = NULL;
 static struct Screen *         My_Screen      = NULL;
+static struct Window *         bf_Window      = NULL;
 
 static struct RastPort *       rp             = NULL;
 
@@ -181,12 +179,12 @@ static void BackFill_Func(void)
 		BufferStartX,
 		BufferStartY,
 		window_width*image_bpp,
+		PIXF_A8R8G8B8,
 		&MyRP,
 		StartX,
 		StartY,
 		SizeX,
-		SizeY,
-		RECTFMT_RGB);
+		SizeY);
 }
 
 
@@ -207,7 +205,13 @@ static void draw_alpha_rgb32 (int x0,int y0, int w,int h, unsigned char* src, un
 /******************************** PREINIT ******************************************/
 static int preinit(const char *arg)
 {
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Welcome man !.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [wpa] Welcome man !.\n");
+
+	if ( ! LIB_IS_AT_LEAST(GraphicsBase, 54,100) )
+	{
+		mp_msg(MSGT_VO, MSGL_INFO, "VO: [wpa] You need graphics.library version 54.100 or newer.\n");	
+		return -1;
+	}
 
 	if (!gfx_GiveArg(arg))
 	{
@@ -262,6 +266,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      TRUE,
 					WA_SizeGadget,      FALSE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -282,6 +287,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      FALSE,
 					WA_SizeGadget,      FALSE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -310,6 +316,7 @@ static ULONG Open_Window()
 					WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
 					WA_SizeGadget,      FALSE,
 					WA_SizeBBottom,	TRUE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -369,11 +376,8 @@ static ULONG Open_FullScreen()
 { 
 	// if fullscreen -> let's open our own screen
 	// It is not a very clean way to get a good ModeID, but a least it works
-	struct Screen *Screen;
-	struct DimensionInfo buffer_Dimmension;
 	ULONG depth;
 	ULONG ModeID;
-	ULONG max_width,max_height;
 
 	if(WantedModeID)
 	{
@@ -390,7 +394,7 @@ static ULONG Open_FullScreen()
 		return INVALID_ID;
 	}
 
-	mp_msg(MSGT_VO, MSGL_INFO, "VO: [cgx_wpa] Full screen.\n");
+	mp_msg(MSGT_VO, MSGL_INFO, "VO: [wpa] Full screen.\n");
 
 	if ( ModeID != INVALID_ID )
 	{
@@ -404,15 +408,17 @@ static ULONG Open_FullScreen()
 
 		My_Screen = OpenScreenTags ( NULL,
 			SA_DisplayID,  ModeID,
-#if PUBLIC_SCREEN
-			SA_Type, PUBLICSCREEN,
-			SA_PubName, "MPlayer Screen",
+#ifdef PUBLIC_SCREEN
+				SA_Type, PUBLICSCREEN,
+				SA_PubName, "MPlayer Screen",
 #else
-			SA_Type, CUSTOMSCREEN,
+				SA_Type, CUSTOMSCREEN,
 #endif
 			SA_Title, "MPlayer Screen",
 			SA_ShowTitle, FALSE,
-			TAG_DONE);
+			SA_Quiet, 	TRUE,
+			SA_LikeWorkbench, TRUE,
+		TAG_DONE);
 	}
 
 	 if ( ! My_Screen ) 
@@ -434,6 +440,26 @@ static ULONG Open_FullScreen()
 	internal_offset_x = 0;
 	internal_offset_y = 0;
 
+	bf_Window = OpenWindowTags( NULL,
+			WA_PubScreen,       (ULONG) My_Screen,
+			WA_Top,		0,
+			WA_Left,		0,
+			WA_Height,		vo_screenheight,
+			WA_Width,		vo_screenwidth,
+			WA_SimpleRefresh,   TRUE,
+			WA_CloseGadget,     FALSE,
+			WA_DragBar,         FALSE,
+			WA_Borderless,      TRUE,
+			WA_Backdrop,        TRUE,
+			WA_Activate,        FALSE,
+		TAG_DONE);
+
+	if (bf_Window)
+	{
+		/* Fill the screen with black color */
+		RectFillColor(bf_Window->RPort, 0,0, My_Screen->Width, My_Screen->Height, 0x00000000);
+	}
+
 	My_Window = OpenWindowTags( NULL,
 #if PUBLIC_SCREEN
 			WA_PubScreen,  (ULONG) My_Screen,
@@ -450,6 +476,7 @@ static ULONG Open_FullScreen()
 			WA_DragBar,         TRUE,
 			WA_Borderless,      TRUE,
 			WA_Backdrop,        TRUE,
+			WA_NewLookMenus,	TRUE,
 			WA_Activate,        TRUE,
 			WA_IDCMP,           IDCMP_COMMON,
 			WA_Flags,           WFLG_REPORTMOUSE,
@@ -462,7 +489,8 @@ static ULONG Open_FullScreen()
 		return INVALID_ID;
 	}
 
-	FillPixelArray( My_Window->RPort, 0,0, screen_width, screen_height, 0x00000000);
+	RectFillColor( My_Window->RPort, 0,0, screen_width, screen_height, 0x00000000);
+//	FillPixelArray( My_Window->RPort, 0,0, screen_width, screen_height, 0x00000000);
 /*
 	vo_screenwidth = My_Screen->Width;
 	vo_screenheight = My_Screen->Height;
@@ -538,6 +566,11 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		ModeID = Open_Window();
 	}
 
+	if (My_Window)
+	{
+		attach_menu(My_Window);
+	}
+
 	if (!My_Window)
 	{
 		uninit();
@@ -547,15 +580,6 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	rp = My_Window->RPort;
 	UserMsg = My_Window->UserPort;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-	// CyberIDAttr only works with CGX ID, however on MorphOS there are only CGX Screens
-	// Anyway, it's easy to check, so lets do it... - Piru
-	if ( ! IsCyberModeID(ModeID) ) 
-	{
-		uninit();
-		return -1;
-	}
 
 dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
@@ -631,12 +655,12 @@ static void flip_page(void)
 		0,
 		0,
 		window_width*image_bpp,
-		rp,
+		PIXF_A8R8G8B8,
+		rp,		
 		offset_x,
 		offset_y,
 		window_width,
-		window_height,
-		RECTFMT_ARGB);
+		window_height);
 
 #warning "use rectfmt_raw if screen pixfmt is suited"
 }
@@ -668,35 +692,25 @@ static void FreeGfx(void)
 	gfx_Stop(My_Window);
 
 	MutexObtain( window_mx );
-	// if screen : close Window thn screen
-	if (My_Screen) 
-	{
-		CloseWindow(My_Window);
-		My_Window=NULL;
 
-#ifdef CONFIG_GUI
-		if(use_gui)
-		{
-			if(CloseScreen(My_Screen))
-			{
-				mygui->screen = NULL;
-			}
-		}
-		else
-		{
-			CloseScreen(My_Screen);
-		}
-#else
-		CloseScreen(My_Screen);
-#endif
-		My_Screen = NULL;
+	if (bf_Window) 
+	{
+		CloseWindow(bf_Window);
+		bf_Window=NULL;
 	}
 
 	if (My_Window) 
 	{
 		gfx_StopWindow(My_Window);
+		detach_menu(My_Window);
 		CloseWindow(My_Window);
 		My_Window=NULL;
+	}
+
+	if (My_Screen) 
+	{
+		CloseScreen(My_Screen);
+		My_Screen = NULL;
 	}
 
 	rp = NULL;
