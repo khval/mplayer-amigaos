@@ -31,14 +31,21 @@
 
 #include "aspect.h"
 
+#if HAVE_ALTIVEC
+#ifdef memcpy
+#undef memcpy
+#endif 
+#define memcpy(des,src,size) ALTIVEC_memcpy(des,src,size)
+#else
+#define memcpy(des,src,size) IExec->CopyMemQuick(src,dst,size)
+#endif 
+
 //--becnhmark--
 static struct timezone dontcare = { 0,0 };
 static struct timeval before, after;
 static ULONG benchmark_frame_cnt = 0;
 extern int benchmark;
 //------------------
-
-#include <proto/Picasso96API.h>
 
 #include "../ffmpeg/libswscale/swscale.h"
 #include "../ffmpeg/libswscale/swscale_internal.h" //FIXME
@@ -60,6 +67,7 @@ extern int benchmark;
 #else
 #define dprintf(...) 
 #endif
+
 
 static int32 vo_format = 0;
 
@@ -92,9 +100,11 @@ static ULONG ModeID;
 static ULONG arg_d_width,arg_d_height;
 // --------------------------------------
 
+static void StartVOProcess( void );
+static void StopVOProcess( void );
 
-static void StartVOProcess();
-static void StopVOProcess();
+extern void attach_menu(struct Window *window);
+extern void detach_menu(struct Window *window);
 
 void draw_comp(struct BitMap *the_bitmap,struct Window * the_win, int width,int height);
 
@@ -137,9 +147,24 @@ static uint32_t draw_image(mp_image_t * mpi);
 
 static float best_screen_aspect_ratio;
 
+typedef struct CompositeHookData_s {
+	struct BitMap *srcBitMap; // The source bitmap
+	int32 srcWidth, srcHeight; // The source dimensions
+	int32 offsetX, offsetY; // The offsets to the destination area relative to the window's origin
+	int32 scaleX, scaleY; // The scale factors
+	uint32 retCode; // The return code from CompositeTags()
+} CompositeHookData;
+
+static CompositeHookData hookData;
+static struct Rectangle rect;
+static struct Hook hook;
+
+static struct Window *         My_Window      = NULL;
+static struct Screen *         the_screen      = NULL;
+
 static vo_draw_alpha_func draw_alpha_func;
 
-static void clear_plain_half( int h, char *memory, ULONG value, uint32 BytesPerRow);
+void clear_plain_half( int h, char *memory, ULONG value, uint32 BytesPerRow);
 
 static void  alloc_output_buffer( uint32 width,uint32 height, uint32 format )
 {
@@ -152,7 +177,7 @@ static void  alloc_output_buffer( uint32 width,uint32 height, uint32 format )
 	org_amiga_image_width = width;
 	org_amiga_image_height = height;
 
-	printf("%s:%d - format %d\n",__FUNCTION__,__LINE__,format);
+//	printf("%s:%d - format %d\n",__FUNCTION__,__LINE__,format);
 
 #ifdef __copy_to_vram__
 
@@ -187,9 +212,11 @@ static void  alloc_output_buffer( uint32 width,uint32 height, uint32 format )
 					BMATags_PixelFormat, format,
 					TAG_DONE);
 
+	hookData.srcBitMap = vram_bitmap;
+
 }
 
-static void free_output_buffer()
+static void free_output_buffer( void )
 {
 	int n;
 
@@ -210,16 +237,6 @@ static void free_output_buffer()
 		vram_bitmap = NULL;
 	}
 }
-
-
-typedef struct CompositeHookData_s {
-	struct BitMap *srcBitMap; // The source bitmap
-	int32 srcWidth, srcHeight; // The source dimensions
-	int32 offsetX, offsetY; // The offsets to the destination area relative to the window's origin
-	int32 scaleX, scaleY; // The scale factors
-	uint32 retCode; // The return code from CompositeTags()
-} CompositeHookData;
-
 
 // A YUV colour value
 typedef struct YUV_s {
@@ -243,6 +260,28 @@ static inline void RGBtoYUV (RGB_t rgb, YUV_t *yuv)
     yuv->v = (rgb.r - yuv->y) * 0.713 + 128;
 }
 
+
+static void no_clip_composite(struct RastPort *rastPort);
+static void set_target_hookData( void );
+
+static void no_clip_composite(struct RastPort *rastPort)
+{
+	IGraphics->CompositeTags(
+		COMPOSITE_Src_Over_Dest, hookData.srcBitMap, rastPort -> BitMap,
+		COMPTAG_SrcWidth,   hookData.srcWidth,
+		COMPTAG_SrcHeight,  hookData.srcHeight,
+		COMPTAG_ScaleX, 	hookData.scaleX,
+		COMPTAG_ScaleY, 	hookData.scaleY,
+		COMPTAG_OffsetX,    My_Window->LeftEdge,
+		COMPTAG_OffsetY,    My_Window->TopEdge,
+		COMPTAG_DestX,      My_Window->LeftEdge,
+		COMPTAG_DestY,      My_Window->TopEdge, 
+		COMPTAG_DestWidth,  My_Window->Width,
+		COMPTAG_DestHeight, My_Window->Height,
+		COMPTAG_Flags,      COMPFLAG_SrcFilter | COMPFLAG_IgnoreDestAlpha | COMPFLAG_HardwareOnly,
+		TAG_END);
+}
+
 static ULONG compositeHookFunc(struct Hook *hook, struct RastPort *rastPort, struct BackFillMessage *msg) {
 	CompositeHookData *hookData = (CompositeHookData*)hook->h_Data;
 
@@ -264,47 +303,48 @@ static ULONG compositeHookFunc(struct Hook *hook, struct RastPort *rastPort, str
 	return 0;
 }
 
-static uint32 fillWindowWithBitMap(struct BitMap *bitMap, struct Window *window)
+static void set_target_hookData( void )
 {
-	int SOURCE_WIDTH = amiga_image_width;
-	int SOURCE_HEIGHT = amiga_image_height;
+ 	rect.MinX = My_Window->BorderLeft;
+ 	rect.MinY = My_Window->BorderTop;
+ 	rect.MaxX = My_Window->Width - My_Window->BorderRight - 1;
+ 	rect.MaxY = My_Window->Height - My_Window->BorderBottom - 1;
 
-	ILayers->LockLayer(0, window->RPort->Layer);
-	// Need to composite onto the window's rastport. Since CompositeTags() only renders to bitmaps,
-	// we use ILayers->DoHookClipRects().
-	CompositeHookData hookData;
-	struct Rectangle rect;
-	struct Hook hook;
-
- 	rect.MinX = window->BorderLeft;
- 	rect.MinY = window->BorderTop;
- 	rect.MaxX = window->Width - window->BorderRight - 1;
- 	rect.MaxY = window->Height - window->BorderBottom - 1;
  	float destWidth = rect.MaxX - rect.MinX + 1;
  	float destHeight = rect.MaxY - rect.MinY + 1;
- 	float scaleX = (destWidth + 0.5f) / SOURCE_WIDTH;
- 	float scaleY = (destHeight + 0.5f) / SOURCE_HEIGHT;
+ 	float scaleX = (destWidth + 0.5f) / amiga_image_width;
+ 	float scaleY = (destHeight + 0.5f) / amiga_image_height;
 
-	hookData.srcBitMap = bitMap;
-	hookData.srcWidth = SOURCE_WIDTH;
-	hookData.srcHeight = SOURCE_HEIGHT;
-	hookData.offsetX = window->BorderLeft;
-	hookData.offsetY = window->BorderTop;
+	hookData.srcWidth = amiga_image_width;
+	hookData.srcHeight = amiga_image_height;
+	hookData.offsetX = My_Window->BorderLeft;
+	hookData.offsetY = My_Window->BorderTop;
 	hookData.scaleX = COMP_FLOAT_TO_FIX(scaleX);
 	hookData.scaleY = COMP_FLOAT_TO_FIX(scaleY);
 	hookData.retCode = COMPERR_Success;
 
 	hook.h_Entry = (HOOKFUNC)compositeHookFunc;
 	hook.h_Data = &hookData;
-
-	ILayers->DoHookClipRects(&hook, window->RPort, &rect);
-	ILayers->UnlockLayer(window->RPort->Layer);
-
-	return hookData.retCode;
 }
 
-static struct Window *         My_Window      = NULL;
-static struct Screen *         the_screen      = NULL;
+static void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs)
+{
+	set_target_hookData();
+
+	IExec->MutexObtain( window_mx );
+	if ((vram_bitmap)&&(My_Window))
+	{
+		register struct RastPort *RPort = My_Window->RPort;
+
+		ILayers->LockLayer(0, RPort->Layer);
+		ILayers->DoHookClipRects(&hook, RPort, &rect);
+		ILayers->UnlockLayer( RPort->Layer);
+	}
+	IExec->MutexRelease(window_mx);
+}
+
+
+struct Window *bf_Window = NULL;
 
 // not OS specific
 
@@ -312,6 +352,8 @@ static uint32_t   window_width;           // width and height on the window
 static uint32_t   window_height;          // can be different from the image
 
 extern uint32_t is_fullscreen;
+extern uint32_t can_go_faster;
+
 static BOOL	is_my_screen;
 static BOOL	is_paused = FALSE;
 
@@ -336,8 +378,6 @@ struct BackFillArgs
 	LONG              offsetx;
 	LONG              offsety;
 };
-
-static void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs);
 
 static struct Hook BackFill_Hook =
 {
@@ -381,12 +421,15 @@ static void draw_alpha_yv12 (int x0,int y0, int w,int h, unsigned char* src, uns
 }
 
 extern struct Library *GraphicsBase;
-extern struct Library *LayersBase;
+// extern struct Library *LayersBase;
+
+static uint32 vsync_is_enabled = 0;
 
 /******************************** PREINIT ******************************************/
 static int preinit(const char *arg)
 {
 	BOOL have_compositing = FALSE;
+	BOOL have_readeonhd = FALSE;
 	BOOL have_bitmap_format = FALSE;
 	struct BitMap *test_bitmap;
 
@@ -404,20 +447,40 @@ static int preinit(const char *arg)
 
 	mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp_yuv2] Welcome man !.\n");
 
-	// 	for mplayer2
-	//	if (vo_directrendering != 1) printf("comp_yuv2 supports DR, use --dr to enable it\n");
-
-	vo_directrendering = 1;
-
 	if (!gfx_GiveArg(arg))
 	{
 		mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp_yuv2] config is wrong\n");	
 		return -1;	
 	}
 
+	printf("gfx_nodri = %d\n",(int) gfx_nodri);
+
+
+	if (gfx_nodri==1)
+	{
+		vo_directrendering = 0;
+	}
+	else
+	{
+		vo_directrendering = 1;
+	}
+
 	if ( ( the_screen = IIntuition->LockPubScreen ( gfx_screenname  ) ) )
 	{
+		ULONG DisplayID = 0;
+		struct DisplayInfo display_info;
+		char *ChipDriverName = 0;
+
 		is_my_screen = FALSE;
+
+		IIntuition->GetScreenAttr( the_screen, SA_DisplayID, &DisplayID , sizeof(DisplayID)  );
+		IGraphics->GetDisplayInfoData( NULL, &display_info, sizeof(display_info) , DTAG_DISP, DisplayID);
+		IGraphics->GetBoardDataTags( display_info.RTGBoardNum, GBD_ChipDriver, &ChipDriverName, TAG_END);
+
+		if (strcasecmp(ChipDriverName,"RadeonHD.chip") == 0 )
+		{
+			have_readeonhd = TRUE;
+		}
 
 		best_screen_aspect_ratio = (float) the_screen -> Width / (float) the_screen -> Height;
 
@@ -451,21 +514,38 @@ static int preinit(const char *arg)
 		return -1;
 	}
 
+	if (have_readeonhd == FALSE)
+	{
+		mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp_yuv2] You need RadeonHD to use this video output.\n");
+		return -1;
+	}
+
 	if (have_compositing == FALSE)
 	{
 		mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp_yuv2] Sceeen mode can't do hardware compositing.\n");	
 		return -1;
 	}
 
+	printf("gfx_novsync = %d\n", (int) gfx_novsync);
+	printf("benchmark = %d\n", benchmark);
+
+	vsync_is_enabled = ((benchmark == 0) && (gfx_novsync == 0)) ? 1 : 0;
+	vo_vsync = vsync_is_enabled;
+
+	printf("vsync is enabled = %d\n", (int) vsync_is_enabled);
+
 	benchmark_frame_cnt = 0;
 	gettimeofday(&before,&dontcare);		// to get time before
 
 	StartVOProcess();
-
 	return 0;
 }
 
 extern char * filename;
+
+static ULONG Open_Window( void );
+static ULONG Open_FullScreen( void );
+static void voprocess( void );
 
 static ULONG Open_Window()
 {		
@@ -517,6 +597,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      TRUE,
 					WA_SizeGadget,      FALSE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -537,6 +618,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      FALSE,
 					WA_SizeGadget,      TRUE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -569,6 +651,7 @@ static ULONG Open_Window()
 					WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
 					WA_SizeGadget,      TRUE,
 					WA_SizeBBottom,	TRUE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -620,8 +703,6 @@ static ULONG Open_Window()
 }
 
 
-
-
 static ULONG Open_FullScreen()
 { 
 	// if fullscreen -> let's open our own screen
@@ -632,8 +713,6 @@ static ULONG Open_FullScreen()
 	ULONG left = 0, top = 0;
 	ULONG out_width = 0;
 	ULONG out_height = 0;
-
-//	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if(WantedModeID)
 	{
@@ -648,7 +727,6 @@ static ULONG Open_FullScreen()
 		}
 
 		ModeID = IGraphics->GetVPModeID(&Screen->ViewPort);
-
 		IIntuition->UnlockPubScreen(NULL, Screen);
 	}
 
@@ -680,29 +758,20 @@ static ULONG Open_FullScreen()
 			SA_Title, "MPlayer Screen",
 			SA_ShowTitle, FALSE,
 			SA_Quiet, 	TRUE,
-//			WantedModeID ? TAG_IGNORE : SA_Width,  vo_screenwidth,
-//			WantedModeID ? TAG_IGNORE : SA_Height, vo_screenheight,
+			SA_LikeWorkbench, TRUE,
 		TAG_DONE);
 	}
 
 	 if ( ! the_screen ) 
 	{
 		mp_msg(MSGT_VO, MSGL_ERR, "Unable to open the screen ID:%x\n", (int) ModeID);
-	  uninit();
-	  return INVALID_ID;
+		uninit();
+		return INVALID_ID;
 	}
-
 
 	is_my_screen = TRUE;
 
-	/* Fill the screen with black color */
-	IP96->p96RectFill(&(the_screen->RastPort), 0,0, the_screen->Width, the_screen->Height, 0x00000000);
-
 	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-#ifdef PUBLIC_SCREEN
-	PubScreenStatus( the_screen, 0 );
-#endif
 
 	vo_screenwidth = the_screen -> Width;
 	vo_screenheight = the_screen -> Height;
@@ -718,29 +787,44 @@ static ULONG Open_FullScreen()
 
    	aspect(&out_width,&out_height,A_ZOOM);
 
-	dprintf("%s:%ld OpenWindowTags()  \n",__FUNCTION__,__LINE__);
-
 	left=(the_screen->Width-out_width)/2;
 	top=(the_screen->Height-out_height)/2;
 
-	My_Window = IIntuition->OpenWindowTags( NULL,
-#ifdef PUBLIC_SCREEN
-			WA_PubScreen,  (ULONG) the_screen,
-#else
-			WA_CustomScreen,  (ULONG) the_screen,
-#endif
+	bf_Window = IIntuition->OpenWindowTags( NULL,
 			WA_PubScreen,       (ULONG) the_screen,
-		    WA_Top,		top,
-		    WA_Left,		left,
-		    WA_Height,		out_height,
-		    WA_Width,		out_width,
-		    WA_SimpleRefresh,   TRUE,
-		    WA_CloseGadget,     FALSE,
-		    WA_DragBar,         TRUE,
+			WA_Top,		0,
+			WA_Left,		0,
+			WA_Height,		vo_screenheight,
+			WA_Width,		vo_screenwidth,
+			WA_SimpleRefresh,   TRUE,
+			WA_CloseGadget,     FALSE,
+			WA_DragBar,         FALSE,
 			WA_Borderless,      TRUE,
 			WA_Backdrop,        TRUE,
-		    WA_Activate,        TRUE,
-			WA_IDCMP,           IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_REFRESHWINDOW | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW,
+			WA_Activate,        FALSE,
+		TAG_DONE);
+
+	if (bf_Window)
+	{
+		/* Fill the screen with black color */
+		IGraphics->RectFillColor(bf_Window->RPort, 0,0, the_screen->Width, the_screen->Height, 0x00000000);
+	}
+
+	My_Window = IIntuition->OpenWindowTags( NULL,
+			WA_PubScreen,       (ULONG) the_screen,
+			WA_Top,		top,
+			WA_Left,		left,
+			WA_Height,		out_height,
+			WA_Width,		out_width,
+			WA_SimpleRefresh,   TRUE,
+			WA_CloseGadget,     FALSE,
+			WA_DragBar,         FALSE,
+			WA_Borderless,      TRUE,
+			WA_Backdrop,        FALSE,
+			WA_NewLookMenus,	TRUE,
+			WA_Activate,        TRUE,
+			WA_IDCMP,           IDCMP_MOUSEMOVE | IDCMP_MENUPICK | IDCMP_MENUVERIFY | IDCMP_MOUSEBUTTONS | IDCMP_RAWKEY | 
+							IDCMP_EXTENDEDMOUSE | IDCMP_REFRESHWINDOW | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW,
 			WA_Flags,           WFLG_REPORTMOUSE,
 		TAG_DONE);
 
@@ -771,25 +855,25 @@ static int PrepareBuffer(uint32_t in_format, uint32_t out_format)
 		case IMGFMT_YV12:
 			vo_format = IMGFMT_YV12;
 			gfx_common_rgb_format = PIXF_YUV420P;
-			draw_alpha_func =draw_alpha_yv12;
+			draw_alpha_func =(vo_draw_alpha_func) draw_alpha_yv12;
 			break;
 
 		case IMGFMT_I420:
 			vo_format = IMGFMT_I420;
 			gfx_common_rgb_format = PIXF_YUV420P;
-			draw_alpha_func =draw_alpha_yv12;
+			draw_alpha_func =(vo_draw_alpha_func) draw_alpha_yv12;
 			break;
 
 		case IMGFMT_NV12:
 			vo_format = IMGFMT_NV12;
 			gfx_common_rgb_format = PIXF_YUV420P;
-			draw_alpha_func =draw_alpha_yv12;
+			draw_alpha_func =(vo_draw_alpha_func) draw_alpha_yv12;
 			break;
 /*
 		case IMGFMT_422P:
 			vo_format = IMGFMT_422P;
 			gfx_common_rgb_format = PIXF_YUV422;
-			draw_alpha_func =draw_alpha_yv12;
+			draw_alpha_func =(vo_draw_alpha_func) draw_alpha_yv12;
 			break;
 */
 		default:
@@ -811,99 +895,133 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 {
 	ModeID = INVALID_ID;
 
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
-
 	if (My_Window) return 0;
 
 	is_fullscreen = flags & VOFLAG_FULLSCREEN;
+	set_gfx_rendering_option();
+
 	is_paused = FALSE;
 
 	num_buffers = vo_doublebuffering ? (vo_directrendering ? NUM_BUFFERS : 2) : 1;
 
 	amiga_image_format = in_format; 
 
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
+	if (FirstTime)
+	{
+		gfx_common_rgb_format = PIXF_YUV420P;
+		alloc_output_buffer( width, height, gfx_common_rgb_format );
+		vo_dwidth = amiga_image_width;
+		vo_dheight = amiga_image_height;
+	}
 
 	IExec->MutexObtain( window_mx );
 
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
+	PrepareBuffer(in_format, 0 );
 
-		PrepareBuffer(in_format, 0 );
+	if (vo_process)
+	{
+		arg_d_width = d_width;
+		arg_d_height = d_height;
+		IExec->Signal( &vo_process->pr_Task, (1<<sig_vo_openwindow) );
+		IExec->Wait(SIGF_CHILD);		// Wait for process to signal to continue
+	}
 
-/*
-		org_amiga_image_width = width;
-		org_amiga_image_height =height;
-		amiga_image_width = width ;
-		amiga_image_height = height ;
-*/
-
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
-
-		if (vo_process)
+	if (!My_Window)
+	{
+		while ((window_width<300)||(window_height<300))
 		{
-			arg_d_width = d_width;
-			arg_d_height = d_height;
-			IExec->Signal( &vo_process->pr_Task, (1<<sig_vo_openwindow) );
-			IExec->Wait(SIGF_CHILD);		// Wait for process to signal to continue
+			window_width *= 2;
+			window_height *= 2;
 		}
 
-		if (!My_Window)
-		{
-			while ((window_width<300)||(window_height<300))
-			{
-				window_width *= 2;
-				window_height *= 2;
-			}
+		IExec->MutexRelease(window_mx);
+		uninit();
+		return -1;
+	}
 
-			IExec->MutexRelease(window_mx);
-			uninit();
-			return -1;
-		}
-
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
-
-		if (FirstTime)
-		{
-			vo_dwidth = amiga_image_width;
-			vo_dheight = amiga_image_height;
-
-
-			gfx_common_rgb_format = PIXF_YUV420P;
-
-			alloc_output_buffer( width, height, gfx_common_rgb_format );
-		}
-
-
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
-
-		FirstTime = FALSE;
+	FirstTime = FALSE;
 
 	IExec->MutexRelease(window_mx);
 
 	gfx_Start(My_Window);
-
-//	printf("%s:%s:%d\n",__FILE__,__FUNCTION__,__LINE__);
+	flip_page();	// update the gfx, on slow FPS.
 
 	return 0; // -> Ok
 }
 
 
-static void clear_plain_half( int h, char *memory, ULONG value, uint32 BytesPerRow)
+void clear_plain_half( int h, char *memory, ULONG value, uint32 BytesPerRow)
 {
 	register int y;
-	
+	int BytesPerRow_h = BytesPerRow >>1;
+
 	h/=2;
 
 	if (memory)
 	{
+		if (h&3==0)
+		{
+			h = h>>2;
+			for (y=0;y<h;y++)
+			{
+				memset( (void *) (memory) , value , BytesPerRow_h);
+				memory += BytesPerRow;
+				memset( (void *)  (memory) , value , BytesPerRow_h);
+				memory += BytesPerRow;
+				memset( (void *) (memory) , value , BytesPerRow_h);
+				memory += BytesPerRow;
+				memset( (void *) (memory) , value , BytesPerRow_h);
+				memory += BytesPerRow;
+			}
+			return;
+		}
+		else
+		{
+			for (y=0;y<h;y++)
+			{
+				memset( (void *) ((uint32) (memory) + (y * BytesPerRow)) , value , BytesPerRow/2);
+			}
+			return;
+		}
+	}
+}
+void copy_plain_half(int yf, int w, register int h, register char *src, int bpr, register char *dst, uint32 BytesPerRow)
+{
+	register int y;
+	register int size;
+
+	h/=2;yf/=2;
+
+	dst += yf * BytesPerRow;
+	size = bpr>(w/2) ?  w/2 : bpr;
+
+	if (h&3==0)
+	{
+		h = h>>2;
 		for (y=0;y<h;y++)
 		{
-			memset( (void *) ((uint32) (memory) + (y * BytesPerRow)) , value , BytesPerRow/2);
+			memcpy( (void *) dst, (void *) src,  size );
+			src += bpr;	dst += BytesPerRow;
+			memcpy( (void *) dst, (void *) src,  size );
+			src += bpr;	dst += BytesPerRow;
+			memcpy( (void *) dst, (void *) src,  size );
+			src += bpr;	dst += BytesPerRow;
+			memcpy( (void *) dst, (void *) src,  size );
+			src += bpr;	dst += BytesPerRow;
+		}
+	}
+	else
+	{
+		for (y=0;y<h;y++)
+		{
+			memcpy( (void *) dst, (void *) src,  size );
+			src += bpr;
+			dst += BytesPerRow;
 		}
 	}
 }
 
-static void copy_plain(int yf, int w, register  int h, register char *src, int bpr, register  char *dst, uint32 BytesPerRow)
+void copy_plain(int yf, int w, register  int h, register char *src, int bpr, register  char *dst, uint32 BytesPerRow)
 {
 	register int y;
 	register int size;
@@ -919,11 +1037,47 @@ static void copy_plain(int yf, int w, register  int h, register char *src, int b
 	{
 		size = bpr>w ?  w : bpr;
 
-		for (y=0;y<h;y++)
+		if (h&7==0)
 		{
-			IExec->CopyMemQuick( (void *) src , (void *) dst , size);
-			src += bpr;
-			dst += BytesPerRow;
+			h = h>>3;
+			for (y=0;y<h;y++)
+			{
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+				memcpy( (void *) dst, (void *) src,  size );
+				src += bpr;
+				dst += BytesPerRow;
+			}
+			return;
+		}
+		else
+		{
+			for (y=0;y<h;y++)
+			{
+				memcpy( (void *) dst , (void *) src , size);
+				src += bpr;
+				dst += BytesPerRow;
+			}
+			return;
 		}
 	}
 }
@@ -938,7 +1092,7 @@ static void copy_plain_i420(int yf, int w, register  int h, register char *src, 
 	if (bpr == BytesPerRow)
 	{
 			size = h * bpr;
-			IExec->CopyMemQuick( (void *) src , (void *) dst , size);
+			memcpy( (void *) dst , (void *) src , size);
 	}
 	else
 	{
@@ -946,30 +1100,10 @@ static void copy_plain_i420(int yf, int w, register  int h, register char *src, 
 
 		for (y=0;y<h/2;y++)
 		{
-			IExec->CopyMemQuick( (void *) src , (void *) dst , size);
+			memcpy( (void *) dst , (void *) src , size);
 			src += bpr;
 			dst += BytesPerRow;
 		}
-	}
-}
-
-
-
-static void copy_plain_half(int yf, int w, register int h, register char *src, int bpr, register char *dst, uint32 BytesPerRow)
-{
-	register int y;
-	register int size;
-
-	h/=2;yf/=2;
-
-	dst += yf * BytesPerRow;
-	size = bpr>(w/2) ?  w/2 : bpr;
-
-	for (y=0;y<h;y++)
-	{
-		IExec->CopyMemQuick( (void *) src , (void *) dst , size);
-		src += bpr;
-		dst += BytesPerRow;
 	}
 }
 
@@ -1005,12 +1139,6 @@ static void copy_I420P_to_yuv420p(uint8_t *image[], int stride[], int w,int h,in
 	struct PlanarYUVInfo yuvInfo;
 	APTR lock;
 
-	uint32 src;
-	uint32 des;
-	uint32 yy;
-	uint32 y2;
-	uint32 size;
-
 #ifdef __copy_to_vram__
 	if (!ram_bitmap[current_buf]) return;
 	lock = IGraphics->LockBitMapTags(ram_bitmap[current_buf],	LBM_PlanarYUVInfo, &yuvInfo,	TAG_END);
@@ -1040,15 +1168,6 @@ static void copy_yv12_to_yuv420p(uint8_t *image[], int stride[], int w,int h,int
 	struct PlanarYUVInfo yuvInfo;
 	APTR lock;
 
-	uint32 src;
-	uint32 des;
-	uint32 yy;
-	uint32 y2;
-	uint32 size;
-
-
-//	printf("to %d  from %d,%d,%d,%d\n",current_buf,x,y,w,h);
-
 if (gfx_nodma==FALSE)
 {
 	if (!ram_bitmap[current_buf]) return;
@@ -1073,12 +1192,6 @@ static void copy_nv12_to_yuv420p(uint8_t *image[], int stride[], int w,int h,int
 	struct PlanarYUVInfo yuvInfo;
 	APTR lock;
 
-	uint32 src;
-	uint32 des;
-	uint32 yy;
-	uint32 y2;
-	uint32 size;
-
 #ifdef __copy_to_vram__
 	if (!ram_bitmap[current_buf]) return;
 	lock = IGraphics->LockBitMapTags(ram_bitmap[current_buf],	LBM_PlanarYUVInfo, &yuvInfo,	TAG_END);
@@ -1096,9 +1209,7 @@ static void copy_nv12_to_yuv420p(uint8_t *image[], int stride[], int w,int h,int
 
 		IGraphics->UnlockBitMap(lock);
 	}
-
 }
-
 
 
 /******************************** DRAW_SLICE ******************************************/
@@ -1134,7 +1245,7 @@ static int draw_slice(uint8_t *image[], int stride[], int w,int h,int x,int y)
 
 static void draw_osd(void)
 {
-	if (draw_alpha_func) vo_draw_text(amiga_image_width,amiga_image_height,draw_alpha_func);
+	if (draw_alpha_func) vo_draw_text(amiga_image_width,amiga_image_height, (void *) draw_alpha_func);
 
 	if (vo_process)
 	{
@@ -1142,17 +1253,6 @@ static void draw_osd(void)
 		IExec->Wait(SIGF_CHILD);	// just becouse some other process need to wake up first.
 	}
 }
-
-static void BackFill_Func(struct RastPort *ArgRP, struct BackFillArgs *MyArgs)
-{
-	IExec->MutexObtain( window_mx );
-	if ((vram_bitmap)&&(My_Window))
-	{
-		fillWindowWithBitMap( vram_bitmap, My_Window);
-	}
-	IExec->MutexRelease(window_mx);
-}
-
 
 /******************************** FLIP_PAGE ******************************************/
 static void flip_page(void)
@@ -1182,8 +1282,6 @@ static void FreeGfx(void)
 
 	dprintf("%s:%s:%ld\n",__FILE__,__FUNCTION__,__LINE__);
 
-	IDOS->Delay(1);
-
 	if (vo_process)
 	{
 		IExec->Signal( &vo_process->pr_Task, (1<<sig_vo_closewindow) );
@@ -1202,7 +1300,7 @@ static void uninit(void)
 	{
 		gettimeofday(&after,&dontcare);		// to get time after
 		microsec = (after.tv_usec - before.tv_usec) +(1000000 * (after.tv_sec - before.tv_sec));
-		printf("Internal COMP YUV FPS %0.00f\n",(float)  benchmark_frame_cnt / (float) (microsec / 1000 / 1000) );
+		printf("Internal COMP YUV2 - FPS %0.00f\n",(double)  benchmark_frame_cnt /  ( (double) microsec / 1000.0l / 1000.0l) );
 	}
 	benchmark_frame_cnt = 0;
 
@@ -1236,6 +1334,8 @@ static int control(uint32_t request, void *data)
 		case VOCTRL_FULLSCREEN:
 
 			is_fullscreen ^= VOFLAG_FULLSCREEN;
+			set_gfx_rendering_option();
+
 			FreeGfx();
 			if ( config(org_amiga_image_width, org_amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;
 			return VO_TRUE;
@@ -1269,11 +1369,27 @@ static int control(uint32_t request, void *data)
 			return query_format(*(ULONG *)data);
 
 		case VOCTRL_GET_IMAGE:
-			if (gfx_nodri==FALSE)	return get_image(data);
+			if (gfx_nodri==1)
+			{
+				printf("** Codec asked, but was not allowed **\n");
+				return VO_FALSE;
+			}
+			else
+			{
+				return get_image(data);
+			}
 			break;
 
 	       	case VOCTRL_DRAW_IMAGE:
-			if (gfx_nodri==FALSE)	return draw_image(data);
+			if (gfx_nodri==1)
+			{
+				printf("** Codec asked, but was not allowed **\n");
+				return VO_FALSE;
+			}
+			else
+			{
+				return draw_image(data);
+			}
 			break;
 
 		case VOCTRL_GET_PANSCAN:
@@ -1368,7 +1484,6 @@ static uint32_t get_image(mp_image_t * mpi)
 	struct PlanarYUVInfo yuvInfo;
 	APTR lock;
 
-
 //	printf("should not be called\n");
 
 	if (mpi->imgfmt != amiga_image_format) return VO_FALSE;  
@@ -1398,8 +1513,8 @@ static uint32_t get_image(mp_image_t * mpi)
 				if (!mpi->flags & MP_IMGFLAG_SWAPPED)
 				{
 					// I420
-					mpi->planes[1] = (uint32) yuvInfo.VMemory;
-					mpi->planes[2] = (uint32) yuvInfo.UMemory;
+					mpi->planes[1] = yuvInfo.VMemory;
+					mpi->planes[2] = yuvInfo.UMemory;
 
 					// FFMPEG does not like BytesPerRow = Image.BytesPerRow,
 					// but we have hacked FFMPEG.
@@ -1410,8 +1525,8 @@ static uint32_t get_image(mp_image_t * mpi)
 				{
 					// YV12
 
-					mpi->planes[1] = (uint32) yuvInfo.UMemory;
-					mpi->planes[2] = (uint32) yuvInfo.VMemory;
+					mpi->planes[1] = yuvInfo.UMemory;
+					mpi->planes[2] = yuvInfo.VMemory;
 
 					// FFMPEG does not like BytesPerRow = Image.BytesPerRow,
 					// but we have hacked FFMPEG.
@@ -1478,6 +1593,7 @@ static void voprocess()
 			if (ModeID == INVALID_ID)	// so if vi failed to open on monitor.
 			{
 				is_fullscreen &= ~VOFLAG_FULLSCREEN;	// we do not have fullscreen
+				set_gfx_rendering_option();
 
 				if ( ( the_screen = IIntuition->LockPubScreen ( gfx_screenname) ) )
 				{
@@ -1501,15 +1617,29 @@ static void voprocess()
 				ModeID = Open_Window();
 			}
 
+			if (My_Window) 	// if success attach menu.
+			{
+				attach_menu(My_Window);
+				set_target_hookData();
+			}
+
+
 			IExec->Signal( &MainTask->pr_Task, SIGF_CHILD );	// confirm done.
 		}
 
 		if (rsigs & (1<<sig_vo_closewindow))
 		{
+			if (bf_Window) 
+			{
+				IIntuition->CloseWindow(bf_Window);
+				bf_Window=NULL;
+			}
+
 			if (My_Window) 
 			{
 				gfx_StopWindow(My_Window);
 				ILayers->InstallLayerHook(My_Window->RPort->Layer, NULL);
+				detach_menu(My_Window);
 				IIntuition->CloseWindow(My_Window);
 				My_Window=NULL;
 			}
@@ -1542,7 +1672,7 @@ static void voprocess()
 				IGraphics->BltBitMap(ram_bitmap[visible_buf], 0, 0, vram_bitmap, 0, 0, amiga_image_width, amiga_image_height, 0xC0, 0xFF, NULL);
 			}
 
-			if (draw_alpha_func) vo_draw_text(amiga_image_width,amiga_image_height,draw_alpha_func);
+			if (draw_alpha_func) vo_draw_text(amiga_image_width,amiga_image_height, (void *) draw_alpha_func);
 
 		}
 
@@ -1552,9 +1682,21 @@ static void voprocess()
 
 			if (My_Window)
 			{
+				if (vsync_is_enabled==1)
+				{
+					IGraphics->WaitBOVP(&(My_Window->WScreen->ViewPort));
+				}
 
-				if (!benchmark) IGraphics->WaitBOVP(&(My_Window->WScreen->ViewPort));
-				fillWindowWithBitMap( vram_bitmap, My_Window);
+				if (can_go_faster==1)
+				{
+					no_clip_composite( My_Window->RPort );
+//					ILayers->DoHookClipRects(&hook, My_Window->RPort, &rect);
+				}
+				else
+				{
+					set_target_hookData();
+					ILayers->DoHookClipRects(&hook, My_Window->RPort, &rect);
+				}
 			}
 			benchmark_frame_cnt++;
 		}

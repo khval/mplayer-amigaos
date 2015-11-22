@@ -26,14 +26,14 @@ extern struct Library * 		  LayersBase;
 #endif
 
 extern ULONG gfx_common_rgb_format;
-extern BOOL gfx_novsync;
-extern BOOL gfx_nodri;
-extern BOOL gfx_nodma;	// no buffer, only vram bitmap.
+extern ULONG gfx_novsync;
+extern ULONG gfx_nodri;
+extern ULONG gfx_nodma;	// no buffer, only vram bitmap.
 extern char *gfx_screenname;
 
 #define IDCMP_COMMON IDCMP_MOUSEBUTTONS | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW  | \
 	IDCMP_CHANGEWINDOW | IDCMP_MOUSEMOVE | IDCMP_REFRESHWINDOW | IDCMP_RAWKEY | \
-	IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_INTUITICKS
+	IDCMP_EXTENDEDMOUSE | IDCMP_CLOSEWINDOW | IDCMP_NEWSIZE | IDCMP_INTUITICKS | IDCMP_MENUPICK | IDCMP_MENUVERIFY
 
 //| IDCMP_SIZEVERIFY
 
@@ -104,6 +104,8 @@ extern BOOL fix_border(struct gfx_command *commands, char *cmd_name, ULONG *valu
 extern BOOL gfx_process_args(char *arg, struct gfx_command *commands);
 extern uint32 find_best_screenmode(int RTGBoardNum, uint32 depth_bits, float aspect, int get_w, int get_h);
 extern void print_screen_info( ULONG monitor, ULONG ModeID );
+
+extern void set_gfx_rendering_option();
 
 /******************************/
 

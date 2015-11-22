@@ -26,6 +26,10 @@
 
 //--becnhmark--
 static struct timezone dontcare = { 0,0 };
+
+
+static struct timeval bt_before, bt_after;
+
 static struct timeval before, after;
 ULONG benchmark_frame_cnt = 0;
 //------------------
@@ -120,6 +124,9 @@ extern uint32_t	amiga_image_height;
 extern float		amiga_aspect_ratio;
 static uint32_t		amiga_image_bpp;            	// image bpp
 
+static struct Window *         My_Window      = NULL;
+static struct Screen *         My_Screen      = NULL;
+static struct Window *         bf_Window      = NULL;
 
 static float best_screen_aspect_ratio;
 
@@ -157,6 +164,7 @@ void draw_comp_bitmap(struct BitMap *the_bitmap,struct BitMap *the_bitmap_dest, 
 
 	if (the_bitmap)
 	{
+		LockLayer(0, My_Window->RPort->Layer);
 
 		error = CompositeTags(COMPOSITE_Src, 
 			the_bitmap, the_bitmap_dest,
@@ -168,6 +176,8 @@ void draw_comp_bitmap(struct BitMap *the_bitmap,struct BitMap *the_bitmap_dest, 
 			COMPTAG_SrcAlpha, (uint32) (0x0010000 ),
 			COMPTAG_Flags, COMPFLAG_SrcAlphaOverride | COMPFLAG_HardwareOnly | COMPFLAG_SrcFilter ,
 			TAG_DONE);
+
+		UnlockLayer(My_Window->RPort->Layer);
 	}
 }
 
@@ -184,8 +194,7 @@ void draw_comp(struct BitMap *the_bitmap,struct Window * the_win, int width,int 
 
 static vo_draw_alpha_func draw_alpha_func;
 
-static struct Window *         My_Window      = NULL;
-static struct Screen *         My_Screen      = NULL;
+
 
 static struct RastPort *       rp             = NULL;
 
@@ -199,6 +208,9 @@ static uint32_t   screen_width;           // Indicates the size of the screen in
 static uint32_t   screen_height;          // Only use for triple buffering
 
 extern uint32_t is_fullscreen;
+extern uint32_t can_go_faster;
+
+
 BOOL	is_paused = FALSE;
 
 extern UWORD *EmptyPointer;               // Blank pointer
@@ -397,20 +409,17 @@ static int preinit(const char *arg)
 
 	if ( ( My_Screen = LockPubScreen ( gfx_screenname ) ) )
 	{
+		ULONG DisplayID = 0;
+		struct DisplayInfo display_info;
+		char *ChipDriverName = 0;
+
 		best_screen_aspect_ratio = (float) My_Screen -> Width / (float) My_Screen -> Height;
 
-		if (GetScreenAttr( My_Screen, SA_Compositing, &have_compositing, sizeof(have_compositing)))
-		{
-			if (have_compositing == FALSE)
-			{
-				mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp] Sceeen mode does not have compositing.\n");	
-				return -1;
-			}
-		}
-		else
-		{
-			mp_msg(MSGT_VO, MSGL_INFO, "VO: [comp] Warning: GetScreenAttr can't get SA_Compositing value.\n");	
-		}
+		GetScreenAttr( My_Screen, SA_DisplayID, &DisplayID , sizeof(DisplayID)  );
+		GetDisplayInfoData( NULL, &display_info, sizeof(display_info) , DTAG_DISP, DisplayID);
+		GetBoardDataTags( display_info.RTGBoardNum, GBD_ChipDriver, &ChipDriverName, TAG_END);
+
+		printf("VO: [comp] screen use driver: %s\n",ChipDriverName);
 
 		UnlockPubScreen(NULL, My_Screen);
 	}
@@ -466,6 +475,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      TRUE,
 					WA_SizeGadget,      FALSE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -486,6 +496,7 @@ static ULONG Open_Window()
 					WA_DragBar,         FALSE,
 					WA_Borderless,      FALSE,
 					WA_SizeGadget,      TRUE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -518,6 +529,7 @@ static ULONG Open_Window()
 					WA_Borderless,      (gfx_BorderMode == NOBORDER) ? TRUE : FALSE,
 					WA_SizeGadget,      TRUE,
 					WA_SizeBBottom,	TRUE,
+					WA_NewLookMenus,	TRUE,
 					WA_Activate,        WindowActivate,
 					WA_IDCMP,           IDCMP_COMMON,
 					WA_Flags,           WFLG_REPORTMOUSE,
@@ -624,6 +636,7 @@ static ULONG Open_FullScreen()
 			SA_Title, "MPlayer Screen",
 			SA_ShowTitle, FALSE,
 			SA_Quiet, 	TRUE,
+			SA_LikeWorkbench, TRUE,
 			TAG_DONE);
 	}
 
@@ -634,19 +647,12 @@ static ULONG Open_FullScreen()
 	  return INVALID_ID;
 	}
 
-
-	/* Fill the screen with black color */
-	RectFillColor(&(My_Screen->RastPort), 0,0, My_Screen->Width, My_Screen->Height, 0x00000000);
-
-	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-
 #ifdef PUBLIC_SCREEN
 	PubScreenStatus( My_Screen, 0 );
 #endif
 
-	screen_width = My_Screen->Width;
-	screen_height = My_Screen->Height;
+	vo_screenwidth = screen_width = My_Screen->Width;
+	vo_screenheight = screen_height = My_Screen->Height;
 
 	offset_x = (screen_width - window_width)/2;
 	offset_y = (screen_height - window_height)/2;
@@ -666,6 +672,26 @@ static ULONG Open_FullScreen()
 	left=(My_Screen->Width-out_width)/2;
 	top=(My_Screen->Height-out_height)/2;
 
+	bf_Window = OpenWindowTags( NULL,
+			WA_PubScreen,       (ULONG) My_Screen,
+			WA_Top,		0,
+			WA_Left,		0,
+			WA_Height,		My_Screen->Height,
+			WA_Width,		My_Screen->Width,
+			WA_SimpleRefresh,   TRUE,
+			WA_CloseGadget,     FALSE,
+			WA_DragBar,         FALSE,
+			WA_Borderless,      TRUE,
+			WA_Backdrop,        TRUE,
+			WA_Activate,        FALSE,
+		TAG_DONE);
+
+	if (bf_Window)
+	{
+		/* Fill the screen with black color */
+		RectFillColor(bf_Window->RPort, 0,0, My_Screen->Width, My_Screen->Height, 0x00000000);
+	}
+
 	My_Window = OpenWindowTags( NULL,
 #ifdef PUBLIC_SCREEN
 			WA_PubScreen,  (ULONG) My_Screen,
@@ -683,7 +709,9 @@ static ULONG Open_FullScreen()
 			WA_Borderless,      TRUE,
 			WA_Backdrop,        TRUE,
 			WA_Activate,        TRUE,
-			WA_IDCMP,           IDCMP_MOUSEMOVE | IDCMP_MOUSEBUTTONS | IDCMP_RAWKEY | IDCMP_EXTENDEDMOUSE | IDCMP_REFRESHWINDOW | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW,
+			WA_NewLookMenus,	TRUE,
+			WA_IDCMP,		IDCMP_MOUSEMOVE | IDCMP_MENUPICK | IDCMP_MENUVERIFY | IDCMP_MOUSEBUTTONS | IDCMP_RAWKEY | 
+							IDCMP_EXTENDEDMOUSE | IDCMP_REFRESHWINDOW | IDCMP_INACTIVEWINDOW | IDCMP_ACTIVEWINDOW,
 			WA_Flags,           WFLG_REPORTMOUSE,
 		TAG_DONE);
 
@@ -744,6 +772,8 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 	if (My_Window) return 0;
 
 	is_fullscreen = flags & VOFLAG_FULLSCREEN;
+	set_gfx_rendering_option();
+
 	is_paused = FALSE;
 
 	amiga_image_format = in_format; 
@@ -791,7 +821,14 @@ static int config(uint32_t width, uint32_t height, uint32_t d_width,
 		if (ModeID == INVALID_ID)
 		{
 			is_fullscreen &= ~VOFLAG_FULLSCREEN;	// we do not have fullscreen
+			set_gfx_rendering_option();
+
 			ModeID = Open_Window();
+		}
+
+		if (My_Window)
+		{
+			attach_menu(My_Window);
 		}
 
 		if (!My_Window)
@@ -921,7 +958,7 @@ static void flip_page(void)
 	
 		if ((ww==amiga_image_width)&&(wh==amiga_image_height))	// no scaling so we dump it into the window.
 		{
-//			if (gfx_novsync==FALSE) WaitTOF();
+			if (gfx_novsync==0) WaitTOF();
 			WritePixelArray( output_ri.Memory, 0, 0, output_ri.BytesPerRow, PIXF_A8R8G8B8, 
 					My_Window -> RPort, My_Window->BorderLeft,My_Window->BorderTop, amiga_image_width,amiga_image_height);
 		}
@@ -933,8 +970,10 @@ static void flip_page(void)
 			WritePixelArray( output_ri.Memory, 0, 0, output_ri.BytesPerRow, PIXF_A8R8G8B8, 
 					&rp, 0,0, amiga_image_width,amiga_image_height);
 
-//			if (gfx_novsync==FALSE) WaitTOF();
-			if (is_fullscreen)	// do it fast
+			if (gfx_novsync==0) WaitTOF();
+
+			// can't use this any more when we have menus!! :-(
+			if (can_go_faster)	// do it fast
 			{
 				draw_comp( the_bitmap,My_Window, amiga_image_width,amiga_image_height);
 			}
@@ -961,51 +1000,30 @@ static int draw_frame(uint8_t *src[])
 static void FreeGfx(void)
 {
 
-#ifdef CONFIG_GUI
-	if (use_gui)
-	{
-		guiGetEvent(guiSetWindowPtr, NULL);
-		mygui->screen = My_Screen;
-	}
-#endif
-
 	gfx_ControlBlanker(My_Screen, TRUE);
 	gfx_Stop(My_Window);
 
-	Delay(1);
-
 	MutexObtain( window_mx );
-
-	// if screen : close Window thn screen
-	if (My_Screen) 
-	{
-		CloseWindow(My_Window);
-		My_Window=NULL;
-
-#ifdef CONFIG_GUI
-		if(use_gui)
-		{
-			if(CloseScreen(My_Screen))
-			{
-				mygui->screen = NULL;
-			}
-		}
-		else
-		{
-			CloseScreen(My_Screen);
-		}
-#else
-		CloseScreen(My_Screen);
-#endif
-		My_Screen = NULL;
-	}
 
 	if (My_Window) 
 	{
 		gfx_StopWindow(My_Window);
 		if (rp) InstallLayerHook(rp->Layer, NULL);
+		detach_menu(My_Window);
 		CloseWindow(My_Window);
 		My_Window=NULL;
+	}
+
+	if (bf_Window) 
+	{
+		CloseWindow(bf_Window);
+		bf_Window=NULL;
+	}
+
+	if (My_Screen) 
+	{
+		CloseScreen(My_Screen);
+		My_Screen = NULL;
 	}
 
 	rp = NULL;
@@ -1013,15 +1031,11 @@ static void FreeGfx(void)
 	if (the_bitmap) { FreeBitMap(the_bitmap); 	the_bitmap = NULL; }
 	if (output_ri.Memory)
 	{
-		dprintf("%s:%ld -- Free image buffer here\n",__FUNCTION__,__LINE__);
 		FreeVec(output_ri.Memory);	output_ri.Memory = NULL;
 	}
 
 	if (inner_bitmap) { FreeBitMap(inner_bitmap);  inner_bitmap = NULL; }
-
 	MutexRelease(window_mx);
-
-	dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 }
 
 /******************************** UNINIT    ******************************************/
@@ -1062,6 +1076,8 @@ static int control(uint32_t request, void *data)
 		case VOCTRL_FULLSCREEN:
 
 			is_fullscreen ^= VOFLAG_FULLSCREEN;
+			set_gfx_rendering_option();
+
 			FreeGfx();
 			if ( config(org_amiga_image_width, org_amiga_image_height, window_width, window_height, is_fullscreen, NULL, amiga_image_format) < 0) return VO_FALSE;
 			return VO_TRUE;

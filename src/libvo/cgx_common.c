@@ -72,6 +72,27 @@ extern struct ApplicationIFace *IApplication;
 
 #include "cgx_common.h"
 
+
+BOOL choosing_flag = FALSE;
+uint32_t is_fullscreen = 0;
+uint32_t can_go_faster = 0;
+BOOL menu_in_use = FALSE;
+
+void set_gfx_rendering_option()
+{
+/*
+	printf("\n");
+	printf("is_fullscreen = %s\n",is_fullscreen ? "True" : "False" );
+	printf("menu_in_use = %s\n",menu_in_use ? "True" : "False" );
+	printf("choosing_flag = %s\n",choosing_flag ? "True" : "False" );
+*/
+	can_go_faster = (is_fullscreen) && (menu_in_use == FALSE) && (choosing_flag == FALSE) ? is_fullscreen : 0;
+/*
+	printf("can_go_faster = %s\n", can_go_faster ? "True" : "False" );
+	printf("\n");
+*/
+}
+
 static char *strcasestr(char *heystack,char *needle)
 {
 	char h,  n;
@@ -128,9 +149,9 @@ extern IMAGE_HEIGHT;
 
 // Set here, and use in the vo_gfx_**
 ULONG gfx_monitor = 0;
-BOOL gfx_novsync = FALSE;
-BOOL gfx_nodri = FALSE;
-BOOL gfx_nodma = FALSE;
+ULONG gfx_novsync = 0;
+ULONG gfx_nodri = 0;
+ULONG gfx_nodma = 0;
 char *gfx_screenname = NULL;
 
 
@@ -139,7 +160,7 @@ ULONG WantedModeID = 0;
 // Blank pointer
 UWORD *EmptyPointer = NULL;
 
-uint32_t is_fullscreen;
+
 
 #define NOBORDER			0
 #define TINYBORDER			1
@@ -335,8 +356,8 @@ BOOL gfx_process_arg(char *arg, struct gfx_command *commands)
 				{
 					if (cmd -> target) 
 					{
-						*((BOOL *) (cmd -> target)) = TRUE ;
-						printf("target %08x set true\n", cmd -> target);
+						*((ULONG *) (cmd -> target)) = 1 ;
+						printf("---------- target %08x set true  ------\n", cmd -> target);
 					}
 					if (cmd -> hook_fn) error = cmd -> hook_fn(commands,arg, cmd -> target) ? TRUE : error;
 				}
@@ -594,11 +615,26 @@ int resize_sec;
 
 BOOL is_user_resized = TRUE;
 
+
+#if 1
+extern void do_appwindow();
+extern ULONG appwindow_sig;
+#else
+#define appwindow_sig 0 
+#define do_appwindow(win)
+#endif
+
+uint32_t microsec;
+static struct timezone dontcare = { 0,0 };
+static struct timeval before, after;
+
 BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_t *window_height, uint32_t *window_width,
 	uint32_t *window_left, uint32_t *window_top )
 {
 	ULONG retval = FALSE;
 	ULONG info_sig=1L;
+	ULONG window_sig ;
+	ULONG sig;
 
 	if ( ! MutexAttempt( window_mx ) ) return retval;
 
@@ -608,7 +644,9 @@ BOOL gfx_CheckEvents(struct Screen *My_Screen, struct Window *My_Window, uint32_
 		return retval;
 	}
 
-	info_sig=1L<<(My_Window->UserPort)->mp_SigBit;
+	window_sig = 1L<<(My_Window->UserPort)->mp_SigBit;
+
+	info_sig = window_sig | appwindow_sig ;
 
 #ifdef CONFIG_GUI
 if(!use_gui)
@@ -620,7 +658,7 @@ if(!use_gui)
 }
 #endif
 
-	if (is_fullscreen && !mouse_hidden)
+	if (is_fullscreen && !mouse_hidden )
 	{
 		if (!p_secs1 && !p_mics1)
 		{
@@ -631,16 +669,25 @@ if(!use_gui)
 			CurrentTime(&p_secs2, &p_mics2);
 			if (p_secs2-p_secs1>=2)
 			{
-				// Ok, let's hide ;)
-				gfx_ShowMouse(My_Screen, My_Window, FALSE);
+				if (!menu_in_use)
+				{
+					// Ok, let's hide ;)
+					gfx_ShowMouse(My_Screen, My_Window, FALSE);
+				}
 				p_secs1=p_secs2=p_mics1=p_mics2=0;
 			}
 		}
 	}
-	
-	if(SetSignal(0L,info_sig ) & info_sig) 
-	{ // If an event -> Go Go GO !
 
+	sig = SetSignal(0L,info_sig );
+
+	if ( sig & appwindow_sig )
+	{
+		do_appwindow();
+	}	
+
+	if( sig & window_sig ) 
+	{ 
 		struct IntuiMessage * IntuiMsg;
 		ULONG Class;
 		UWORD Code;
@@ -658,7 +705,7 @@ if(!use_gui)
 			MouseY    = IntuiMsg->MouseY;
 			mouse_wheel = (struct IntuiWheelData *) IntuiMsg -> IAddress;
 
-			ReplyMsg( (struct Message *) IntuiMsg);
+//			gettimeofday(&before,&dontcare);		// to get time after
 
 			switch( Class )
 			{
@@ -793,33 +840,30 @@ if(!use_gui)
 					{
 						char cmd_str[40];
 						
-						// Blanks pointer stuff
-						if (is_fullscreen)
+						if ((is_fullscreen)&&(mouse_hidden))
 						{
-							if (mouse_hidden)
-							{
 								gfx_ShowMouse(My_Screen, My_Window, TRUE);
-								/*
-								#ifdef CONFIG_GUI
-								if (use_gui)
-									guiGetEvent(guiShowPanel, TRUE);
-								#endif
-								*/
-							}
 						}
-#ifndef __amigaos4__						
-						if (gfx_BorderMode == DISAPBORDER)
-						{
-							BOOL mouse = ismouseon(My_Window);
 
-							if (mouse != mouseonborder) TransparencyControl(My_Window, TRANSPCONTROLMETHOD_UPDATETRANSPARENCY,NULL);
-								mouseonborder = mouse;
-						}
-#endif
 						sprintf(cmd_str,"set_mouse_pos %i %i", MouseX-My_Window->BorderLeft, MouseY-My_Window->BorderTop);
 						mp_input_queue_cmd(mp_input_parse_cmd(cmd_str));
 					}
+					break;
 
+				case IDCMP_MENUVERIFY:
+					menu_in_use =TRUE;
+					set_gfx_rendering_option();		// can't go fast when you pick in the menu.
+
+					if ((is_fullscreen)&&(mouse_hidden))
+					{
+							gfx_ShowMouse(My_Screen, My_Window, TRUE);
+					}
+					break;
+
+				case IDCMP_MENUPICK:
+					menu_events( IntuiMsg );
+					menu_in_use = FALSE;
+					set_gfx_rendering_option();
 					break;
 
 				case IDCMP_REFRESHWINDOW:
@@ -856,6 +900,7 @@ if(!use_gui)
 #endif
 
 				case IDCMP_RAWKEY:
+
 					 switch ( Code )
 					 {
 						 case  RAWKEY_ESCAPE:    mplayer_put_key(KEY_ESC); break;
@@ -915,24 +960,34 @@ if(!use_gui)
 						 case  RAWKEY_RAMIGA:    break;
 					   
 						 default:
-						 {
-							struct InputEvent ie;
-							TEXT c;
+							 {
+								struct InputEvent ie;
+								TEXT c;
 
-							ie.ie_Class        = IECLASS_RAWKEY;
-							ie.ie_SubClass     = 0;
-							ie.ie_Code         = Code;
-							ie.ie_Qualifier    = Qualifier;
-							ie.ie_EventAddress = NULL;
+								ie.ie_Class        = IECLASS_RAWKEY;
+								ie.ie_SubClass     = 0;
+								ie.ie_Code         = Code;
+								ie.ie_Qualifier    = Qualifier;
+								ie.ie_EventAddress = NULL;
 
-							if (MapRawKey(&ie, &c, 1, NULL) == 1)
-							{
-								mplayer_put_key(c);
-							}
-						 }
+								if (MapRawKey(&ie, &c, 1, NULL) == 1)
+								{
+									mplayer_put_key(c);
+								}
+							 }
 				    }
 				    break;
-		    }
+			}
+
+			ReplyMsg( (struct Message *) IntuiMsg);
+
+
+//			gettimeofday(&after,&dontcare);		// to get time after
+//			microsec = (after.tv_usec - before.tv_usec) +(1000000 * (after.tv_sec - before.tv_sec));
+//			printf("Event Class %08X - %d us\n", Class, microsec);
+
+
+
 	    }
    }
    else if(SetSignal(0L, appwinsig ) & appwinsig) // Handle Dropped files
@@ -1073,36 +1128,15 @@ void gfx_BlankerState(void)
 
 void gfx_ShowMouse(struct Screen * screen, struct Window * window, ULONG enable)
 {
-	struct Library * ibase = (struct Library *) IntuitionBase;
-	if(ibase)
+	if(enable)
 	{
-/*
-#if !PUBLIC_SCREEN
-		if(ibase->lib_Version > 50 || (ibase->lib_Version == 50 && ibase->lib_Revision >=61))
-		{
-			if(screen)
-			{
-				SetAttrs(screen, SA_ShowPointer, enable, TAG_DONE);
-			}
-
-			mouse_hidden = !enable;
-		}
-		else
-#endif
-*/
-		{
-			if(enable)
-			{
-				ClearPointer(window);			 
-			}
-			else if(EmptyPointer)
-			{
-				SetPointer(window, EmptyPointer, 1, 16, 0, 0);
-			}
-		
-			mouse_hidden = !enable;
-		}
+		ClearPointer(window);			 
 	}
+	else if(EmptyPointer)
+	{
+		SetPointer(window, EmptyPointer, 1, 16, 0, 0);
+	}
+	mouse_hidden = !enable;	
 }
 
 #ifdef __old__
