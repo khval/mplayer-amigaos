@@ -25,11 +25,17 @@ APTR pr_WindowPtr;
 #include <proto/icon.h>
 #include <devices/ahi.h>
 
+#include <proto/requester.h>
+#include <classes/requester.h>
+
 /* ARexx */
 #include "arexx.h"
 /* ARexx */
 
 static struct Task *current_task;
+
+// extern void ShowAbout(void);
+extern void PrintMsg(CONST_STRPTR text, int REQ_TYPE, int REQ_IMAGE);
 
 
 #include <clib/alib_protos.h>
@@ -59,8 +65,8 @@ const char version[] = "$VER: " AMIGA_VERSION " " VERSION ;
 //const char version[] = "$VER: AMIGA_VERSION 1.1 (10.1.2014) VERSION ";
 const char STACK[] __attribute((used))   = "$STACK: 5000000";
 
-//extern char *SCREENSHOTDIR;
-char *EXTPATTERN = "(#?.avi|#?.mpg|#?.mpeg|#?.asf|#?.wmv|#?.vob|#?.rm|#?.mov|#?.mp3|#?.ogg|#?.wav|#?.wmv|#?.wma|#?.flv|#?.asf|#?.mp4)";
+char *SCREENSHOTDIR = NULL;
+char *EXTPATTERN = NULL;
 
 static unsigned char ApplicationName[100];
 
@@ -106,6 +112,9 @@ struct Device 			 *TimerBase = NULL;
 struct Library 			 *AslBase = NULL;
 struct AslIFace 		 *IAsl = NULL;
 
+struct Library 			 *GadToolsBase = NULL;
+struct AslIFace 		 *IGadTools = NULL;
+
 struct Library 			 *ApplicationBase = NULL;
 struct ApplicationIFace	*IApplication = NULL;
 
@@ -126,6 +135,12 @@ struct IP96IFace		*IP96 = NULL;
 
 struct DebugIFace 		*IDebug = NULL;
 
+struct Library			*RequesterBase = NULL;
+struct RequesterIFace 	*IRequester = NULL;
+
+struct Library 		 *AHIBase ;
+struct AHIIFace		*IAHI ;
+
 #ifdef HAVE_CGX
 struct Libraty *CyberGfxBase = NULL;
 struct CyberGfxIFace *ICyberGfx = NULL;
@@ -138,14 +153,11 @@ UBYTE  TimerDevice = -1; // -1 -> not opened
 struct TimeRequest 		 *TimerRequest = NULL;
 struct MsgPort 	   		 *TimerMsgPort = NULL;
 
-struct MsgPort   		 *AppPort = NULL;
-
 static char **AmigaOS_argv = NULL;
 static int AmigaOS_argc = 0;
 uint32 AppID = 0;
 
 static void Free_Arg(void);
-extern void RemoveAppPort(void);
 extern struct DiskObject *DIcon;
 extern struct AppIcon 	 *MPLAppIcon;
 
@@ -220,8 +232,6 @@ void AmigaOS_ParseArg(int argc, char *argv[], int *new_argc, char ***new_argv)
 	{
 		return ; // We never know !
 	}
-
-
 
 	if (Cli())
 	{
@@ -378,22 +388,28 @@ void AmigaOS_Close(void)
 
 	IIntuition = IIntuition_SDL_workaround;
 
+	if (!SCREENSHOTDIR)
+	{
+		free(SCREENSHOTDIR);
+		SCREENSHOTDIR = NULL;
+	}
+
+	if (!EXTPATTERN)
+	{
+		free(EXTPATTERN);
+		EXTPATTERN = NULL;
+	}
+
 	Forbid();
 	current_task = FindTask(NULL);
 	((struct Process *) current_task) -> pr_WindowPtr = pr_WindowPtr;			// enable insert disk.
 	Permit();
-
 
 	if (OldPtr)
 	{
 		//SetTaskPri(p,0);
 		SetProcWindow((APTR) OldPtr);
 	}
-	//if (t) t=NULL;
-
-
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 #if HAVE_APP_ICON
 	if (MPLAppIcon)	RemoveAppIcon(MPLAppIcon);
@@ -408,7 +424,6 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	{
 		if (IApplication)
 		{
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 			SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, TRUE, TAG_DONE);
 			SetApplicationAttrs(AppID, APPATTR_NeedsGameMode, FALSE, TAG_DONE);
 			//SendApplicationMsg(AppID, 0, NULL, APPLIBMT_BlankerAllow);
@@ -417,16 +432,7 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 		AppID = 0;
 	}
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
-	RemoveAppPort();
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	Free_Arg();
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 
 	if (IDebug) DropInterface((struct Interface*)IDebug); IDebug = 0;
 
@@ -435,55 +441,40 @@ dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 	if (IAsyncIO) DropInterface((struct Interface*)IAsyncIO); IAsyncIO = 0;
 #endif
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+	if (RequesterBase) CloseClass(RequesterBase); RequesterBase = NULL;
 
 	if (IntuitionBase) CloseLibrary(IntuitionBase); IntuitionBase = 0;
 	if (IIntuition) DropInterface((struct Interface*) IIntuition); IIntuition = 0;
 	IIntuition_SDL_workaround = 0;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (GraphicsBase) CloseLibrary(GraphicsBase); GraphicsBase = 0;
 	if (IGraphics) DropInterface((struct Interface*) IGraphics); IGraphics = 0;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (ApplicationBase) CloseLibrary(ApplicationBase); ApplicationBase = 0;
 	if (IApplication) DropInterface((struct Interface*)IApplication); IApplication = 0;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (WorkbenchBase) CloseLibrary(WorkbenchBase); WorkbenchBase = 0;
 	if (IWorkbench) DropInterface((struct Interface*)IWorkbench); IWorkbench = 0;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (KeymapBase) CloseLibrary(KeymapBase); KeymapBase = 0;
 	if (IKeymap) DropInterface((struct Interface*) IKeymap); IKeymap = 0;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
-
 	if (LayersBase) CloseLibrary(LayersBase); LayersBase = 0;
 	if (ILayers) DropInterface((struct Interface*) ILayers); ILayers = 0;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (AslBase) CloseLibrary(AslBase); AslBase = 0;
 	if (IAsl) DropInterface((struct Interface*)IAsl); IAsl = 0;
 
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
+	if (GadToolsBase) CloseLibrary(GadToolsBase); GadToolsBase = 0;
+	if (IGadTools) DropInterface((struct Interface*) IGadTools); IGadTools = 0;
 
 	if (Picasso96Base) CloseLibrary(Picasso96Base); Picasso96Base = 0;
 	if (IP96) DropInterface((struct Interface*)IP96); IP96 = 0;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);
 
 	if (!TimerDevice) CloseDevice( (struct IORequest *) TimerDevice); TimerDevice = 0;
 	if (TimerRequest) FreeSysObject ( ASOT_IOREQUEST, TimerRequest ); TimerRequest = 0;
 	if (TimerMsgPort) FreeSysObject ( ASOT_PORT, TimerMsgPort ); TimerMsgPort = 0;
 	if (ITimer) DropInterface((struct Interface*) ITimer); ITimer = 0;
-
-dprintf("%s:%ld\n",__FUNCTION__,__LINE__);	
 
 	if (window_mx) FreeSysObject( ASOT_MUTEX , window_mx ); window_mx = 0;
 
@@ -534,12 +525,7 @@ int AmigaOS_Open(int argc, char *argv[])
 	window_mx = AllocSysObject( ASOT_MUTEX, TAG_DONE );
 	if (!window_mx) 		return -1;
 
-	AppPort = AllocSysObject(ASOT_PORT,NULL);
-	if (!AppPort)
-	{
-		mp_msg(MSGT_CPLAYER, MSGL_FATAL, "Failed to create AppPort\n");
-		return -1;
-	}
+
 
 	TimerMsgPort = AllocSysObject(ASOT_PORT,NULL);
 	if ( !TimerMsgPort )
@@ -586,11 +572,9 @@ int AmigaOS_Open(int argc, char *argv[])
 	if ( ! open_lib( "cybergraphics.library", 43L , "main", 1, &CyberGfxBase, (struct Interface **) &ICyberGfx  ) ) return -1;
 #endif
 
-
 	IDebug =	GetInterface( SysBase,  "debug" , 1 , TAG_END );
 
 	if ( ! open_lib( "dos.library", 0L , "main", 1, &DOSBase, (struct Interface **) &IDOS  ) ) return -1;
-
 
 	if ( ! open_lib( "asl.library", 0L , "main", 1, &AslBase, (struct Interface **) &IAsl  ) ) return -1;
 	if ( ! open_lib( "intuition.library", 51L , "main", 1, &IntuitionBase, (struct Interface **) &IIntuition  ) ) return -1;
@@ -600,6 +584,9 @@ int AmigaOS_Open(int argc, char *argv[])
 	if ( ! open_lib( "keymap.library", 51L , "main", 1, &KeymapBase, (struct Interface **) &IKeymap ) ) return -1;
 	if ( ! open_lib( "layers.library", 51L , "main", 1, &LayersBase, (struct Interface **) &ILayers ) ) return -1;
 	if ( ! open_lib( "Picasso96API.library", 51L , "main", 1, &Picasso96Base, (struct Interface **) &IP96 ) ) return -1;
+	if ( ! open_lib( "gadtools.library", 51L , "main", 1, &GadToolsBase, (struct Interface **) &IGadTools ) ) return -1;
+
+	RequesterBase = OpenClass("requester.class",53,&IRequester);
 
 	IIntuition_SDL_workaround = IIntuition;	// save IIntuition as SDL sets this to NULL :-(
 
@@ -608,12 +595,6 @@ int AmigaOS_Open(int argc, char *argv[])
 	pr_WindowPtr = ((struct Process *) current_task) -> pr_WindowPtr;
 	((struct Process *) current_task) -> pr_WindowPtr = -1L;			// Disable insert disk.
 	Permit();
-/*
-	if (current_task) SetTaskPri(current_task,1);
-*/
-#ifdef CONFIG_AHI
-//	open_ahi();
-#endif
 
 	//Register the application so the ScreenBlanker don't bother us..
 
@@ -646,12 +627,23 @@ int AmigaOS_Open(int argc, char *argv[])
 		SetApplicationAttrs(AppID, APPATTR_AllowsBlanker, FALSE, TAG_DONE);
 	}
 
+	if (!SCREENSHOTDIR)
+	{
+		SCREENSHOTDIR = strdup("ram:");
+	}
+
+	if (!EXTPATTERN)
+	{
+		EXTPATTERN = strdup("#?.(avi|mpg|mpeg|.asf|wmv|vob|rm|mov|mp3|ogg|wav|wmv|wma|flv|asf|mp4|3gp)");
+	}
+
 #if HAVE_AREXX
 	StartArexx();	
 #endif
 
 	return 0;
 }
+
 
 /*
 char *mp_asprintf( char *fmt, ... )
@@ -666,11 +658,3 @@ char *mp_asprintf( char *fmt, ... )
 }
 */
 
-void RemoveAppPort()
-{
-	if (AppPort)
-	{
-		FreeSysObject(ASOT_PORT,AppPort);
-		AppPort = NULL;
-	}
-}
