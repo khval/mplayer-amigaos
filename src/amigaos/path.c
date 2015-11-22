@@ -7,8 +7,6 @@
 static const char * const homedir = "progdir:";
 static const char * const config_dir = "conf";
 
-const char *SCREENSHOTDIR = NULL;
-
 char *codec_path = BINARY_CODECS_PATH;
 
 char *get_path(const char *filename){

@@ -86,6 +86,9 @@ typedef struct ArexxHandle
 void StartArexx();
 void StopArexx();
 
+void put_command0(int cmd) ;
+void put_icommand1(int cmd,int v) ;
+void put_icommand2(int cmd,int v,int v2) ;
 
 // Input: Pointer to int to store an error code. Is optional and may be NULL
 // Returns: ArexxHandle, or NULL for failure
